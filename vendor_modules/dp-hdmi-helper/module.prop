@@ -1,0 +1,6 @@
+id=dp-hdmi-helper
+name=DP HDMI Helper
+version=v1.2
+versionCode=12
+author=local
+description=Safe DP/HDMI helper (prefer_live, no dp_drm/forced_resolution/bist)

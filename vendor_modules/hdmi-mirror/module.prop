@@ -1,0 +1,6 @@
+id=hdmi-mirror
+name=HDMI Mirror Control
+version=v1.3
+versionCode=13
+author=local
+description=Mirrors phone UI to USB-C HDMI/DP hub (root). Portrait rotate + live-first. Tap Action to start/stop.

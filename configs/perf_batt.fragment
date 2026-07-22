@@ -1,0 +1,15 @@
+# CPU / scheduler / thermal oriented defaults (safe for Exynos9810 4.9)
+CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
+CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
+CONFIG_DEFAULT_USE_ENERGY_AWARE=y
+# Prefer CFQ for this UFSHCD stack (BFQ not in tree)
+CONFIG_IOSCHED_CFQ=y
+CONFIG_DEFAULT_CFQ=y
+CONFIG_DEFAULT_IOSCHED="cfq"
+# Keep Exynos thermal / ACPM
+CONFIG_THERMAL=y
+CONFIG_EXYNOS_THERMAL=y
+CONFIG_EXYNOS_ACPM=y
+# Slightly more visibility for chronic wakelock hunting
+# CONFIG_SCHED_DEBUG is not set
+CONFIG_PM_SLEEP_DEBUG=y

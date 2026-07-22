@@ -1,0 +1,4 @@
+# OPTIONAL Pseudo-GKI pilot: Broadcom Wi-Fi as loadable module (dhd.ko)
+# Not applied by default — enable in build_gkilike.sh only after validating WLAN.
+# DECON/display stays built-in.
+CONFIG_BCM4361=m

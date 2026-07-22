@@ -1,0 +1,3 @@
+# Pseudo-GKI vendor modules load list (order matters).
+# Touch pilot — I2C/pinctrl remain built-in in Image.
+sec_ts_drv

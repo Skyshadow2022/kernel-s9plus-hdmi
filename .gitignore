@@ -1,0 +1,52 @@
+# Build outputs
+/out/
+/out_gkilike/
+/out_flash_boot/
+/tmp/
+*.o
+*.ko
+*.mod.c
+*.cmd
+*.order
+*.symvers
+Module.symvers
+
+# Intermediate / dated flash zips (keep STABLE + NEXT + HDMI-READY)
+/Kernel-star2lte-*.zip
+!/Kernel-star2lte-gkilike-STABLE.zip
+!/Kernel-star2lte-gkilike-NEXT.zip
+!/Kernel-star2lte-gkilike-HDMI-READY.zip
+/Kernel-star2lte-202*.zip
+
+# Nested git metadata from upstream PE tree (tracked as plain files here)
+/kernel_source/.git/
+/kernel_source/.git.bak-*/
+
+# Local toolchains / ADB (reinstall on office machine)
+/.tools/
+/toolchains/
+
+# Extra local trees / unpack dirs
+/Kernel-star2lte-20260626-2356/
+/out_ksu/
+/flash_ready/
+/KernelSU-src/
+/kernel_source/.git.bak-upstream/
+
+# Editor / OS junk
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+*.log
+
+# Large optional third-party module archives already mirrored elsewhere
+/out_modules/LSPosed*.zip
+/out_modules/Zygisk*.zip
+/out_modules/HMA-*.zip
+/out_modules/viper4android*.zip
+
+# Keep hdmi-mirror / helper module zips
+!/out_modules/hdmi-mirror*.zip
+!/out_modules/dp-hdmi-helper*.zip

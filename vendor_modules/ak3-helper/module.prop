@@ -1,0 +1,6 @@
+id=ak3-helper
+name=AK3 Helper (touch)
+version=v1.1
+versionCode=11
+author=local
+description=Loads sec_ts touch module + firmware after boot

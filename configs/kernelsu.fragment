@@ -1,0 +1,8 @@
+# KernelSU-Next (legacy) for non-GKI 4.9 — manual hooks, KPROBES off
+CONFIG_KSU=y
+CONFIG_KSU_MANUAL_HOOK=y
+# CONFIG_KSU_KPROBES_HOOK is not set
+# CONFIG_KSU_DEBUG is not set
+# CONFIG_KPROBES is not set
+CONFIG_OVERLAY_FS=y
+CONFIG_LOCALVERSION="-decon-gkilike-ksun-dp"

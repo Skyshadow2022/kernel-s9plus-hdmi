@@ -1,0 +1,6 @@
+# KernelSU-Next built-in hide (NO full SuSFS — unstable on 4.9 legacy)
+CONFIG_KSU=y
+CONFIG_KSU_MANUAL_HOOK=y
+# Keep manager/policy enabled
+# CONFIG_KSU_DISABLE_MANAGER is not set
+# CONFIG_KSU_DISABLE_POLICY is not set
