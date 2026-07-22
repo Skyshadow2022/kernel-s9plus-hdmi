@@ -1,0 +1,60 @@
+### DATA
+/data/log(/.*)?                u:object_r:log_data_file:s0
+/data/vendor/mediadrm(/.*)?    u:object_r:mediadrm_vendor_data_file:s0
+/data/vendor/nfc(/.*)?         u:object_r:nfc_vendor_data_file:s0
+
+### DEV
+# Camera
+/dev/m2m1shot_scaler0          u:object_r:m2m1shot_device:s0
+
+### FACTORY
+/factory(/.*)?                 u:object_r:sec_efs_file:s0
+
+# Graphics
+/dev/g2d                       u:object_r:graphics_device:s0
+/dev/mali[0-9]                 u:object_r:gpu_device:s0
+
+# NFC
+/dev/sec-nfc                   u:object_r:nfc_device:s0
+
+# Secmem
+/dev/s5p-smem                  u:object_r:secmem_device:s0
+
+# Block
+/sys/devices/platform/(.*)/block/sda/queue/discard_max_bytes  u:object_r:sysfs_block_writable:s0
+/sys/devices/platform/(.*)/block/mmcblk0/mmcblk0p[0-9]+/start u:object_r:sysfs_block:s0
+
+# Camera
+/sys/devices/virtual/camera(/.*)                         u:object_r:sysfs_camera:s0
+/sys/devices/virtual/camera/flash/rear_flash             u:object_r:sysfs_camera_writable:s0
+/sys/devices/virtual/camera/rear/ssrm_camera_info        u:object_r:sysfs_camera_writable:s0
+
+# Extcon
+/sys/devices/platform/(.*)/extcon/extcon[0-9]/cable.[0-9]/name        u:object_r:sysfs_extcon:s0
+
+# Sensors
+/sys/devices/platform/13ac0000.spi(/.*)                  u:object_r:sysfs_iio:s0
+/sys/devices/platform/14230000.adc(/.*)                  u:object_r:sysfs_iio:s0
+/sys/devices/platform/13ac0000.spi(/.*)/poll_delay       u:object_r:sysfs_sensors_writable:s0
+/sys/devices/platform/13ac0000.spi(/.*)/buffer/enable    u:object_r:sysfs_sensors_writable:s0
+/sys/devices/platform/13ac0000.spi(/.*)/buffer/length    u:object_r:sysfs_sensors_writable:s0
+
+/sys/devices/virtual/input(/.*)/enable                   u:object_r:sysfs_sensors_writable:s0
+
+# ZRAM
+/dev/block/zram0                                         u:object_r:swap_block_device:s0
+
+# Audio (Soundtrigger)
+/dev/vts_fio_dev                                         u:object_r:vts_fio_device:s0
+
+# Exynos9810 HALs
+/(vendor|system/vendor)/bin/hw/android\.hardware\.biometrics\.fingerprint@[0-9].[0-9]-service\.exynos9810  u:object_r:hal_fingerprint_default_exec:s0
+/(vendor|system/vendor)/bin/hw/android\.hardware\.light(@[0-9].[0-9])?-service\.exynos9810                 u:object_r:hal_light_default_exec:s0
+/(vendor|system/vendor)/bin/hw/android\.hardware\.memtrack-service.exynos9810-mali                         u:object_r:hal_memtrack_default_exec:s0
+/(vendor|system/vendor)/bin/hw/android\.hardware\.power(@[0-9]\.[0-9])?-service\.exynos9810-libperfmgr     u:object_r:hal_power_default_exec:s0
+/(vendor|system/vendor)/bin/hw/android\.hardware\.sensors-service(\.exynos9810-multihal)?                  u:object_r:hal_sensors_default_exec:s0
+/(vendor|system/vendor)/bin/hw/android\.hardware\.usb-service.exynos9810                                   u:object_r:hal_usb_default_exec:s0
+/(vendor|system/vendor)/bin/hw/android\.hardware\.vibrator(@[0-9].[0-9])?-service\.exynos9810              u:object_r:hal_vibrator_default_exec:s0
+
+### VENDOR
+/(vendor|system/vendor)/bin/vendor\.samsung\.hardware\.security\.widevine\.keyprovisioning@[0-9].[0-9]-service     u:object_r:hal_drm_widevine_exec:s0

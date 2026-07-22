@@ -1,0 +1,7 @@
+# rild.te
+
+allow rild log_vendor_data_file:dir create;
+allow rild log_vendor_data_file:file { create setattr };
+
+dontaudit rild system_prop:file read;
+dontaudit rild default_prop:file read;

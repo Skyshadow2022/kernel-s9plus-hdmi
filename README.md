@@ -46,10 +46,8 @@ echo 1 >/sys/class/dp_sec/prefer_live
 echo 0 >/sys/class/dp_sec/bist    # live winmap red
 ```
 
-### Next engineering focus
-1. Fix sustained **VG1/VGF DMA** scanout into DP video FIFO (or alternate IDMA)
-2. Then `hdmi_mirror` screencap → fb1 without FIFO storm
-3. Longer term: PE HWC `ExternalDisplay` (currently never opens)
+### Next engineering focus (DeX-pattern)
+See **[`docs/DEX_PATTERN.md`](docs/DEX_PATTERN.md)** — stop relying on `hdmi_mirror` pan; follow stock HWC ExternalDisplay (`openExternalDisplay` + `S3CFB_WIN_CONFIG`). Reference trees under `reference/`.
 
 ## Layout
 ```

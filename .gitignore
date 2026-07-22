@@ -50,5 +50,12 @@ Module.symvers
 # Keep hdmi-mirror / helper module zips
 !/out_modules/hdmi-mirror*.zip
 !/out_modules/dp-hdmi-helper*.zip
+
+# Huge Samsung OSS tarballs (download on demand)
+/reference/samsung-oss-*/
+/reference/*.zip
+/reference/*.tar*
+# Keep small reference clones; allow ignoring full .git objects if needed
+# /reference/**/.git/
 **/.git.bak-nested/
 **/.git.bak-upstream/

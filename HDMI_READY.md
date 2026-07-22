@@ -21,7 +21,9 @@
 ### Blocker for real UI
 - First `FBIOPAN_DISPLAY` on fb1 returns OK, then continuous **VIDEO FIFO_UNDER_FLOW** + DECON2 timeout
 - Tried: VGF1 → VG1, single-pan mirror, MIF boost, live_trig on/off — DMA scanout still starves
-- Winmap (no DRAM) is fine; VGF/VG DMA path is not
+- Winmap (no DRAM) is fine; pan path is **not** how stock DeX/Mirror feeds frames
+
+**Pivot:** follow stock HWC ExternalDisplay — see [`docs/DEX_PATTERN.md`](docs/DEX_PATTERN.md) and `reference/`.
 
 ### Safe sysfs
 ```bash

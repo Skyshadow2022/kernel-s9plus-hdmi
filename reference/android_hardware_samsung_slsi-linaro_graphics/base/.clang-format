@@ -1,0 +1,26 @@
+Language: Cpp
+
+# AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+# AllowShortEnumsOnASingleLine: false   // false alarm
+# AllowShortFunctionsOnASingleLine: Empty
+# AllowShortIfStatementsOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: false
+AccessModifierOffset: -2
+BreakBeforeBraces: Attach
+FixNamespaceComments: true
+IndentWidth: 4
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: None
+SortIncludes: false
+# SpaceAfterLogicalNot: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpacesBeforeTrailingComments: 2
+Standard: Auto
+TabWidth: 4
+ContinuationIndentWidth: 4
+UseTab: Never
+ColumnLimit: 0
