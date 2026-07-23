@@ -620,6 +620,8 @@ struct displayport_device {
 	enum bit_depth bpc;
 	u8 bist_used;
 	u8 prefer_live; /* AOSP mirror: skip BIST, use decon/fb1 */
+	/* ms to wait for HWC/DISPLAYPORT_STATE_ON before DP BIST fallback */
+	u32 hpd_owner_wait_ms;
 	enum test_pattern bist_type;
 	enum displayport_dynamic_range_type dyn_range;
 	videoformat cur_video;
@@ -1181,6 +1183,8 @@ void displayport_reg_set_video_bist_mode(u32 en);
 void displayport_reg_set_stream_valid_force(u32 en);
 void displayport_live_trig_start(void);
 void displayport_live_trig_stop(void);
+/* Cut DP BIST when HWC feeds decon2 via S3CFB_WIN_CONFIG */
+void displayport_hwc_takeover(void);
 void displayport_reg_set_audio_bist_mode(u32 en);
 void displayport_reg_lh_p_ch_power(u32 en);
 

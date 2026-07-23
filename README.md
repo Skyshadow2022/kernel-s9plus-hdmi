@@ -47,7 +47,11 @@ echo 0 >/sys/class/dp_sec/bist    # live winmap red
 ```
 
 ### Next engineering focus (DeX-pattern)
-See **[`docs/DEX_PATTERN.md`](docs/DEX_PATTERN.md)** — stop relying on `hdmi_mirror` pan; follow stock HWC ExternalDisplay (`openExternalDisplay` + `S3CFB_WIN_CONFIG`). Reference trees under `reference/`.
+See **[`docs/DEX_PATTERN.md`](docs/DEX_PATTERN.md)** and **[`docs/HWC_PHASE_A.md`](docs/HWC_PHASE_A.md)** — stop relying on `hdmi_mirror` pan; follow stock HWC ExternalDisplay (`openExternalDisplay` + `S3CFB_WIN_CONFIG`). Reference trees under `reference/`.
+
+### GitHub Actions
+- **CI Sanity** (every push/PR): `scripts/ci_sanity.sh`
+- **Kernel Build** (manual): Actions → *Kernel Build* → Run workflow → flash zip artifact
 
 ## Layout
 ```
@@ -55,6 +59,8 @@ kernel_source/     Exynos9810 kernel (PE thirteen base + local HDMI patches)
 AnyKernel3/        flash packaging
 vendor_modules/    hdmi-mirror, dp-hdmi-helper
 configs/           gkilike / DP fragments
+.github/workflows/ CI sanity + optional kernel build
+docs/              DEX_PATTERN, HWC_PHASE_A, …
 build_gkilike.sh   build + zip
 HDMI_READY.md      test notes
 ```

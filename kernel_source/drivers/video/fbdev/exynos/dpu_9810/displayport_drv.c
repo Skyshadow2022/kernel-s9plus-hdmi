@@ -1097,6 +1097,33 @@ void displayport_live_trig_stop(void)
 EXPORT_SYMBOL(displayport_live_trig_stop);
 
 /**
+ * Stock/PE HWC path: after HPD timeout we keep the sink lit with BIST.
+ * When ExynosExternalDisplay later issues S3CFB_WIN_CONFIG (real buffers),
+ * cut BIST and switch DP to live video without painting winmap red —
+ * HWC owns the frame feed from here.
+ */
+void displayport_hwc_takeover(void)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	if (!displayport || !displayport->hpd_current_state)
+		return;
+	if (displayport->state != DISPLAYPORT_STATE_ON ||
+	    !displayport->bist_used)
+		return;
+
+	displayport_info("HWC takeover: BIST → live for WIN_CONFIG\n");
+	displayport_live_trig_stop();
+	displayport->bist_used = 0;
+	if (displayport->best_video < supported_videos_pre_cnt)
+		displayport->cur_video = displayport->best_video;
+	displayport_enable(displayport);
+	displayport_reg_set_interrupt_mask(VIDEO_FIFO_UNDER_FLOW_MASK, 0);
+	displayport_live_trig_start();
+}
+EXPORT_SYMBOL(displayport_hwc_takeover);
+
+/**
  * Bring decon2 up and paint solid red. If @cut_bist is false, leave DP in
  * BIST (bars) while DECON is already RUN — then caller cuts BIST so the
  * video FIFO is not empty at mux switch (avoids black TV).
@@ -1291,17 +1318,22 @@ void displayport_hpd_changed(int state)
 		/*
 		 * Always start with DP BIST on HPD. Auto live-kick on plug
 		 * (#31) killed the sink for some hubs — keep TV lit with bars
-		 * until userspace explicitly does prefer_live + bist=0 / mirror.
+		 * until HWC WIN_CONFIG (displayport_hwc_takeover) or
+		 * userspace prefer_live + bist=0 / mirror.
+		 * Default wait gives PE HWC time to openExternalDisplay().
 		 */
 		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
 			(displayport->state == DISPLAYPORT_STATE_ON),
-			msecs_to_jiffies(displayport->prefer_live ? 800 : 8000));
+			msecs_to_jiffies(displayport->prefer_live ? 800 :
+				displayport->hpd_owner_wait_ms));
 		dp_ado_switch_set_state(edid_audio_informs());
 		if (!timeout) {
 			if (displayport->best_video < supported_videos_pre_cnt)
 				displayport->cur_video = displayport->best_video;
-			displayport_err("enable timeout - DP BIST fmt=%s\n",
-					supported_videos[displayport->cur_video].name);
+			displayport_err("enable timeout - DP BIST fmt=%s (waited %ums)\n",
+					supported_videos[displayport->cur_video].name,
+					displayport->prefer_live ? 800 :
+					displayport->hpd_owner_wait_ms);
 			displayport->bist_used = 1;
 			displayport->bist_type = COLOR_BAR;
 			displayport_enable(displayport);
@@ -3639,6 +3671,33 @@ static ssize_t displayport_prefer_live_store(struct class *dev,
 static CLASS_ATTR(prefer_live, 0664, displayport_prefer_live_show,
 		displayport_prefer_live_store);
 
+static ssize_t displayport_hpd_wait_ms_show(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", displayport->hpd_owner_wait_ms);
+}
+
+static ssize_t displayport_hpd_wait_ms_store(struct class *dev,
+		struct class_attribute *attr, const char *buf, size_t size)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+	unsigned int val = 0;
+
+	if (kstrtouint(buf, 10, &val))
+		return size;
+	if (val < 500)
+		val = 500;
+	if (val > 30000)
+		val = 30000;
+	displayport->hpd_owner_wait_ms = val;
+	displayport_info("hpd_owner_wait_ms=%u\n", val);
+	return size;
+}
+static CLASS_ATTR(hpd_wait_ms, 0664, displayport_hpd_wait_ms_show,
+		displayport_hpd_wait_ms_store);
+
 extern u32 phy_tune_parameters[4][4][3];
 static ssize_t displayport_phy_tune_show(struct class *class,
 		struct class_attribute *attr, char *buf)
@@ -4526,6 +4585,9 @@ static int displayport_probe(struct platform_device *pdev)
 			ret = class_create_file(dp_class, &class_attr_prefer_live);
 			if (ret)
 				displayport_err("failed to create attr_prefer_live\n");
+			ret = class_create_file(dp_class, &class_attr_hpd_wait_ms);
+			if (ret)
+				displayport_err("failed to create attr_hpd_wait_ms\n");
 			ret = class_create_file(dp_class, &class_attr_unit_test);
 			if (ret)
 				displayport_err("failed to create attr_unit_test\n");
@@ -4580,8 +4642,10 @@ static int displayport_probe(struct platform_device *pdev)
 	displayport->bpc = BPC_8;
 	displayport->bist_used = 0;
 	displayport->bist_type = COLOR_BAR;
-	/* Default off: HPD stays on BIST until mirror/bist=0 cutover */
+	/* Default off: HPD stays on BIST until HWC/mirror/bist=0 cutover */
 	displayport->prefer_live = 0;
+	/* Enough time for PE openExternalDisplay() before BIST fallback */
+	displayport->hpd_owner_wait_ms = 12000;
 	displayport->dyn_range = CEA_RANGE;
 	displayport->do_unit_test = 0;
 #if defined(CONFIG_EXYNOS_HDCP2)

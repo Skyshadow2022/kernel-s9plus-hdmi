@@ -1,0 +1,20 @@
+name: CI Sanity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need enough history for sparse checks; full tree is large
+          fetch-depth: 1
+
+      - name: Run sanity script
+        run: bash scripts/ci_sanity.sh

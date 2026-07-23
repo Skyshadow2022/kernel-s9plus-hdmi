@@ -5217,8 +5217,8 @@
 		samsung,power-domain = <0xd>;
 		max_win = <0x6>;
 		default_win = <0x4>;
-		/* VGF1: avoid IDMA_G1 so primary HWC keeps G0/G1 (phone UI) */
-		default_idma = <0x5>;
+		/* VG1: matches HWC External DPP_VG1; keep G0/G1 for primary */
+		default_idma = <0x3>;
 		psr_mode = <0x0>;
 		trig_mode = <0x0>;
 		dsi_mode = <0x0>;

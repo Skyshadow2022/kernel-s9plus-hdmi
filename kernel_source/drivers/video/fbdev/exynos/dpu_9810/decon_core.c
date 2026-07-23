@@ -2630,6 +2630,21 @@ static int decon_set_win_config(struct decon_device *decon,
 	int i, j, ret = 0;
 	decon_dbg("%s +\n", __func__);
 
+	/*
+	 * Phase A (stock HWC ExternalDisplay): if DP timed out to BIST and
+	 * HWC now feeds real buffers on decon2, cut BIST so video mux takes
+	 * DECON DMA instead of the pattern generator.
+	 */
+	if (decon->dt.out_type == DECON_OUT_DP) {
+		for (i = 0; i < decon->dt.max_win; i++) {
+			if (win_data->config[i].state == DECON_WIN_STATE_BUFFER ||
+			    win_data->config[i].state == DECON_WIN_STATE_CURSOR) {
+				displayport_hwc_takeover();
+				break;
+			}
+		}
+	}
+
 	mutex_lock(&decon->lock);
 
 	if (IS_DECON_OFF_STATE(decon) ||
@@ -3650,13 +3665,12 @@ static void decon_parse_dt(struct decon_device *decon)
 	decon_info("out type(%d). 0: DSI 1: DISPLAYPORT 2: HDMI 3: WB\n",
 			decon->dt.out_type);
 	/*
-	 * DP (decon2) stock DT pins IDMA_G1. PE/AOSP HWC also needs G1 for
-	 * the primary panel — reserving it blanks the phone while HDMI is live.
-	 * VGF1 (VGRF) underflows on linear RGBA fb pans; VG1 handles RGB.
+	 * DP (decon2) stock/sibling DTs sometimes pin IDMA_G1 or VGF1.
+	 * PE primary HWC needs G1; VGF1 underflows on linear RGBA.
+	 * Force VG1 to match ExynosHWCModule External DPP_VG1 table.
 	 */
 	if (decon->dt.out_type == DECON_OUT_DP &&
-	    (decon->dt.dft_idma == IDMA_G1 ||
-	     decon->dt.dft_idma == IDMA_VGF1)) {
+	    decon->dt.dft_idma != IDMA_VG1) {
 		decon_info("DP decon: remap default_idma %d -> VG1\n",
 				decon->dt.dft_idma);
 		decon->dt.dft_idma = IDMA_VG1;

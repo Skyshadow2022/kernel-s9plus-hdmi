@@ -23,7 +23,12 @@
 - Tried: VGF1 → VG1, single-pan mirror, MIF boost, live_trig on/off — DMA scanout still starves
 - Winmap (no DRAM) is fine; pan path is **not** how stock DeX/Mirror feeds frames
 
-**Pivot:** follow stock HWC ExternalDisplay — see [`docs/DEX_PATTERN.md`](docs/DEX_PATTERN.md) and `reference/`.
+**Pivot:** follow stock HWC ExternalDisplay — see [`docs/DEX_PATTERN.md`](docs/DEX_PATTERN.md), [`docs/HWC_PHASE_A.md`](docs/HWC_PHASE_A.md), and `reference/`.
+
+### Kernel host for HWC (unreleased until next flash zip)
+- HPD wait for HWC: `/sys/class/dp_sec/hpd_wait_ms` (default **12000**)
+- First decon2 BUFFER `WIN_CONFIG` → `displayport_hwc_takeover()` cuts BIST → live
+- star2lte DT `default_idma = VG1` (matches HWC `DPP_VG1`)
 
 ### Safe sysfs
 ```bash
@@ -31,4 +36,5 @@ echo 0 >/sys/class/dp_sec/prefer_live
 echo 1 >/sys/class/dp_sec/bist    # bars
 echo 4 >/sys/class/dp_sec/bist    # solid red BIST
 echo 1 >/sys/class/dp_sec/prefer_live; echo 0 >/sys/class/dp_sec/bist  # live winmap red
+# optional: echo 15000 >/sys/class/dp_sec/hpd_wait_ms
 ```

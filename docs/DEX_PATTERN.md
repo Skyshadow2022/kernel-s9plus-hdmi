@@ -122,7 +122,8 @@ logcat -d | grep -i openExternalDisplay | tail
 | BIST / لینک Sony | اثبات‌شده |
 | Live winmap قرمز | اثبات‌شده روی `#35` |
 | DMA pan / mirror | شکست‌خورده — با الگوی DeX کنار بگذار |
-| گام بعدی دفتر | فاز A روی logcat HWC + PE device/HWC tree |
+| گام بعدی دفتر | فاز A — [`HWC_PHASE_A.md`](HWC_PHASE_A.md) + logcat HWC |
+| کرنل host | `hpd_wait_ms=12s` + `displayport_hwc_takeover` روی WIN_CONFIG |
 
 منابع رسمی/عمومی استفاده‌شده:
 - LineageOS `android_hardware_samsung_slsi-linaro_graphics` (exynos9810 ExternalDisplay)
