@@ -49,10 +49,14 @@ Reference clones under `reference/`:
   - External: `/dev/graphics/fb1`, vsync `16050000.decon_t/vsync`
   - External DPP: **VG1**, **VGFS0 (VGF0)**, G2D
 - Device: `device_samsung_exynos9810-common`
-  - `hal_graphics_composer_default.te` needs uevent + `sysfs_displayport_writable`
+  - **Critical:** `sepolicy/vendor/genfs_contexts` must label
+    `11090000.displayport/.../cable.0/state` as `sysfs_displayport_writable`
+    (was wrongly `10ab0000` — HWC then never sees HPD)
+  - `hal_graphics_composer_default.te`: uevent + `sysfs_displayport_writable`
+    (+ `sysfs_extcon` read as fallback)
   - Ensure `ueventd` allows composer on `fb1` / `g2d`
 
-Kernel alone cannot invent SurfaceFlinger external layers — if PE HWC never opens, fix the PE tree next.
+Kernel alone cannot invent SurfaceFlinger external layers — if PE HWC never opens, fix the PE tree next (sepolicy first).
 
 ## Safe kernel defaults (daily)
 ```bash
