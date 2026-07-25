@@ -42,7 +42,7 @@ jobs:
           path: |
             toolchains/clang
             toolchains/gcc-arm64
-          key: tc-${{ env.CLANG_VERSION }}-gcc-zy49-r2
+          key: tc-${{ env.CLANG_VERSION }}-gcc-gs49dp-r3
 
       - name: Fetch AOSP clang (if missing)
         run: |
@@ -69,12 +69,16 @@ jobs:
             exit 0
           fi
           mkdir -p toolchains/gcc-arm64
-          # aarch64-linux-android-4.9 GCC binutils for CROSS_COMPILE. GitHub
-          # source archive nests everything under one top dir → strip it.
-          URL="https://github.com/ZyCromerZ/aarch64-linux-android-4.9/archive/refs/heads/android-12.0.0_r15.tar.gz"
-          echo "Downloading aarch64-linux-android-4.9 GCC (ZyCromerZ)…"
+          # aarch64-linux-android-4.9 GCC binutils for CROSS_COMPILE, from the
+          # googlesource prebuilt (real binaries, no LFS). This repo has no
+          # master/main branch; use a real android13 4.9 branch that ships the
+          # driver. googlesource +archive puts bin/ at root → no strip.
+          URL="https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/+archive/refs/heads/android-arm64-deadpool-4.9-android13-tv.tar.gz"
+          echo "Downloading aarch64-linux-android-4.9 GCC (googlesource)…"
           curl -L --fail --retry 3 -o /tmp/gcc.tgz "$URL"
-          tar -xzf /tmp/gcc.tgz -C toolchains/gcc-arm64 --strip-components=1
+          tar -xzf /tmp/gcc.tgz -C toolchains/gcc-arm64
+          test -x toolchains/gcc-arm64/bin/aarch64-linux-android-gcc || \
+            chmod -R +x toolchains/gcc-arm64/bin
           test -x toolchains/gcc-arm64/bin/aarch64-linux-android-gcc
 
       - name: Sanity
