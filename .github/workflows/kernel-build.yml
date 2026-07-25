@@ -93,6 +93,12 @@ jobs:
           export PATH="$CLANG_BIN:$GCC_BIN:$PATH"
           clang --version | head -2
           aarch64-linux-android-gcc --version | head -2
+          # build_gkilike.sh expects a base out/.config and won't create one.
+          # Generate it from the in-tree star2lte defconfig (build_gkilike then
+          # layers the touch/kernelsu/displayport/perf fragments on top).
+          make -C kernel_source O="$GITHUB_WORKSPACE/out" ARCH=arm64 \
+            CC=clang CROSS_COMPILE=aarch64-linux-android- \
+            CLANG_TRIPLE=aarch64-linux-gnu- exynos9810-star2lte_defconfig
           ./build_gkilike.sh
 
       - name: Upload flash zip
