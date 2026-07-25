@@ -1,13 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0
 #include <linux/module.h>
+#include <linux/version.h>
+#include "klog.h" // IWYU pragma: keep
+#include "manager/throne_tracker.h"
+
+/*
+ * The packages.list watcher below uses the fsnotify handle_inode_event() API,
+ * which only exists on Linux >= 5.9. On this Exynos9810 tree (kernel 4.9) that
+ * API is absent (fsnotify_ops has the older .handle_event, and
+ * fsnotify_add_inode_mark()/fsnotify_init_mark() differ), so compile the real
+ * observer only on new-enough kernels and fall back to a no-op on 4.9. The
+ * manager app is still (re)detected there by the exec-time (lsm_hooks) and
+ * boot-time (boot_event) track_throne() paths; only the "immediately re-scan
+ * when /data/system/packages.list changes" optimisation is lost. Nothing
+ * security-relevant (apk_sign / throne_tracker) is affected.
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
+
 #include <linux/fs.h>
 #include <linux/namei.h>
 #include <linux/fsnotify_backend.h>
 #include <linux/slab.h>
 #include <linux/rculist.h>
-#include <linux/version.h>
-#include "klog.h" // IWYU pragma: keep
-#include "manager/throne_tracker.h"
 
 #define MASK_SYSTEM (FS_CREATE | FS_MOVE | FS_EVENT_ON_CHILD)
 
@@ -125,3 +139,18 @@ void __exit ksu_observer_exit(void)
 	fsnotify_put_group(g);
 	pr_info("observer exit done\n");
 }
+
+#else /* LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) */
+
+int ksu_observer_init(void)
+{
+	pr_info("observer: packages.list watch unsupported on kernel < 5.9, "
+		"relying on exec/boot throne tracking\n");
+	return 0;
+}
+
+void __exit ksu_observer_exit(void)
+{
+}
+
+#endif /* LINUX_VERSION_CODE */
