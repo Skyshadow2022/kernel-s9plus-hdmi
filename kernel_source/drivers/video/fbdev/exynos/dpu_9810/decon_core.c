@@ -2283,10 +2283,12 @@ video_emul_check_done:
 	/* DP bring-up: dump what HWC sends decon2 (first frames only) */
 	if (decon->id == 2) {
 		static int dp_cfg_dbg;
+		static bool dp_route_ref_done;
 
 		if (dp_cfg_dbg < 24) {
 			for (i = 0; i < decon->dt.max_win; i++) {
 				struct decon_win_config *c = &regs->dpp_config[i];
+				u32 req_dest, idma_en;
 
 				if (c->state == DECON_WIN_STATE_DISABLED)
 					continue;
@@ -2297,7 +2299,41 @@ video_emul_check_done:
 					c->dst.x, c->dst.y, c->dst.w, c->dst.h,
 					&regs->dma_buf_data[i][0].dma_addr,
 					regs->win_regs[i].wincon);
+
+				/*
+				 * #43 FIFO-underflow root-cause probe (READ-ONLY).
+				 * IN_REQ_DEST (0x68) selects which DECON requester an
+				 * IDMA answers; the multi-agent analysis suspects it is
+				 * never programmed to point VG1/VGF0 at decon2, so the
+				 * input FIFO starves. Read the failing channel's routing
+				 * + OP_STATUS. Safe: HWC is actively feeding decon2 here,
+				 * so these channels are powered (no gated-block hang).
+				 */
+				req_dest = dma_read(c->idma_type, IDMA_IN_REQ_DEST);
+				idma_en  = dma_read(c->idma_type, IDMA_ENABLE);
+				decon_info("decon2 probe idma%d: IN_REQ_DEST=0x%08x SEL=%u IDMA_ENABLE=0x%08x OP=%s\n",
+					c->idma_type, req_dest,
+					req_dest & IDMA_IN_REG_DEST_SEL_MASK,
+					idma_en,
+					(idma_en & IDMA_OP_STATUS) ? "BUSY" : "IDLE");
+
 				dp_cfg_dbg++;
+			}
+
+			/*
+			 * One-shot reference: read a DECON0-driven channel (G0) so
+			 * we learn which DEST_SEL value routes to the PRIMARY decon
+			 * before ever writing this field. Do NOT assume dest==decon
+			 * id: the dead DMA_BIST path writes SEL=3, so the encoding
+			 * must be read from working hardware, not guessed.
+			 */
+			if (!dp_route_ref_done) {
+				u32 g0_dest = dma_read(IDMA_G0, IDMA_IN_REQ_DEST);
+
+				decon_info("decon0 ref idma%d(G0): IN_REQ_DEST=0x%08x SEL=%u (baseline routing)\n",
+					IDMA_G0, g0_dest,
+					g0_dest & IDMA_IN_REG_DEST_SEL_MASK);
+				dp_route_ref_done = true;
 			}
 		}
 	}
