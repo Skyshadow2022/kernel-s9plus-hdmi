@@ -24,7 +24,7 @@ jobs:
       SUBARCH: arm64
       ANDROID_VERSION: "130000"
       ANDROID_MAJOR_VERSION: t
-      CLANG_VERSION: r487747c
+      CLANG_VERSION: "14.0.6-zy20260619"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,16 +51,14 @@ jobs:
             echo "clang cache hit"
             exit 0
           fi
-          mkdir -p toolchains
-          # Google clang prebuilt used by many Android 13 trees
-          URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/llvm-r487747/clang-r487747c.tar.gz"
-          echo "Downloading clang from googlesource archive…"
-          curl -L --fail --retry 3 -o /tmp/clang.tgz "$URL" || \
-            curl -L --fail --retry 3 -o /tmp/clang.tgz \
-              "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r487747c/archive/refs/heads/lineage-20.0.tar.gz"
           mkdir -p toolchains/clang
-          tar -xzf /tmp/clang.tgz -C toolchains/clang --strip-components=1 2>/dev/null || \
-            tar -xzf /tmp/clang.tgz -C toolchains/clang
+          # Lean prebuilt AOSP clang 14.0.6 (matches the clang the kernel was
+          # originally built with). ZyCromerZ tarball has bin/ at archive root,
+          # so extract WITHOUT --strip-components.
+          URL="https://github.com/ZyCromerZ/Clang/releases/download/14.0.6-20260619-release/Clang-14.0.6-20260619.tar.gz"
+          echo "Downloading clang 14.0.6 (ZyCromerZ)…"
+          curl -L --fail --retry 3 -o /tmp/clang.tgz "$URL"
+          tar -xzf /tmp/clang.tgz -C toolchains/clang
           test -x toolchains/clang/bin/clang
 
       - name: Fetch aarch64 GCC (if missing)
