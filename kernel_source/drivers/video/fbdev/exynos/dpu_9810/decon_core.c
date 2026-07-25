@@ -414,6 +414,22 @@ static void decon_free_dma_buf(struct decon_device *decon,
 	if (!dma->dma_addr)
 		return;
 
+	/*
+	 * Guard every pointer: the ioctl thread rewrites win->dma_buf_data
+	 * while the update kthread snapshots it (decon_acquire_old_bufs), so
+	 * a torn copy can carry dma_addr with attachment/sg_table still NULL.
+	 * Harmless on primary (update never stalls); on decon2 the DP shadow
+	 * timeouts widen the race window enough to hit it → NULL deref panic.
+	 * Skipping leaks one buffer at worst.
+	 */
+	if (!dma->attachment || !dma->sg_table || !dma->dma_buf) {
+		decon_warn("decon-%d torn dma_buf_data (a=%p s=%p b=%p) - skip free\n",
+				decon->id, dma->attachment, dma->sg_table,
+				dma->dma_buf);
+		memset(dma, 0, sizeof(struct decon_dma_buf_data));
+		return;
+	}
+
 	if (dma->fence)
 		fput(dma->fence->file);
 	ion_iovmm_unmap(dma->attachment, dma->dma_addr);
@@ -1588,21 +1604,14 @@ int decon_check_limitation(struct decon_device *decon, int idx,
 	 * must not steal default_win or default_idma (VGF1) — even during
 	 * colormap/winmap before cur_using_dpp is set.
 	 */
-	if (decon->id == 0) {
-		struct decon_device *dp_decon = get_decon_drvdata(2);
-
-		if (dp_decon && IS_DECON_ON_STATE(dp_decon)) {
-			if (idx == dp_decon->dt.dft_win) {
-				decon_err("win%d reserved for DP/hdmi\n", idx);
-				return -EINVAL;
-			}
-			if (config->idma_type == dp_decon->dt.dft_idma) {
-				decon_err("idma%d reserved for DP/hdmi\n",
-						config->idma_type);
-				return -EINVAL;
-			}
-		}
-	}
+	/*
+	 * NOTE: the old win4/VG1 "reserved for DP/hdmi" hard-reject lived here.
+	 * With PE HWC actually driving ExternalDisplay it backfired: HWC keeps
+	 * assigning win4/VG1 to the PRIMARY display, every primary WIN_CONFIG
+	 * failed with -EINVAL, and the phone screen went black while the hub
+	 * was attached. HWC's resource manager is responsible for cross-display
+	 * DPP assignment — let it, and observe real conflicts instead.
+	 */
 
 	return 0;
 }
@@ -1946,12 +1955,18 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 			goto trigger_done;
 		}
 #endif
-		decon_up_list_saved();
-		decon_dump(decon, REQ_DSI_DUMP);
+		/* External DP: degrade instead of panicking the phone */
+		if (decon->dt.out_type == DECON_OUT_DP) {
+			decon_warn("decon-%d DP decon_reg_start failed - skip\n",
+					decon->id);
+		} else {
+			decon_up_list_saved();
+			decon_dump(decon, REQ_DSI_DUMP);
 #ifdef CONFIG_LOGGING_BIGDATA_BUG
-		log_decon_bigdata(decon);
+			log_decon_bigdata(decon);
 #endif
-		BUG();
+			BUG();
+		}
 	}
 	decon_systrace(decon, 'C', "decon_reg_start", 0);
 
@@ -2265,6 +2280,28 @@ video_emul_check_done:
 
 	decon_check_used_dpp(decon, regs);
 
+	/* DP bring-up: dump what HWC sends decon2 (first frames only) */
+	if (decon->id == 2) {
+		static int dp_cfg_dbg;
+
+		if (dp_cfg_dbg < 24) {
+			for (i = 0; i < decon->dt.max_win; i++) {
+				struct decon_win_config *c = &regs->dpp_config[i];
+
+				if (c->state == DECON_WIN_STATE_DISABLED)
+					continue;
+				decon_info("decon2 cfg win%d: st=%d idma=%d fmt=%d src=%d,%d %dx%d(f%dx%d) dst=%d,%d %dx%d dma=%pad wincon=0x%x\n",
+					i, c->state, c->idma_type, c->format,
+					c->src.x, c->src.y, c->src.w, c->src.h,
+					c->src.f_w, c->src.f_h,
+					c->dst.x, c->dst.y, c->dst.w, c->dst.h,
+					&regs->dma_buf_data[i][0].dma_addr,
+					regs->win_regs[i].wincon);
+				dp_cfg_dbg++;
+			}
+		}
+	}
+
 	decon_systrace(decon, 'C', "decon_update_vgf", 1);
 	decon_update_vgf_info(decon, regs, true);
 	decon_systrace(decon, 'C', "decon_update_vgf", 0);
@@ -2283,7 +2320,27 @@ video_emul_check_done:
 
 	decon_to_psr_info(decon, &psr);
 	if (regs->num_of_window || video_emul_en) {
-		__decon_update_regs(decon, regs);
+		if (__decon_update_regs(decon, regs) < 0 &&
+				decon->dt.out_type == DECON_OUT_DP) {
+			/*
+			 * Early -ETIMEDOUT: previous shadow never latched, so
+			 * regs were NOT committed into win->dma_buf_data. The
+			 * old snapshot is still owned by win — releasing it
+			 * here would double-free it on the next frame (proven
+			 * crash: dma_buf_unmap_attachment NULL deref). Free
+			 * the uncommitted NEW bufs instead and keep old state.
+			 */
+			decon_warn("decon-%d DP uncommitted regs - free new bufs\n",
+					decon->id);
+			decon_release_old_bufs(decon, regs, regs->dma_buf_data,
+					regs->plane_cnt);
+			decon_signal_fence(decon);
+			decon_systrace(decon, 'E', "decon_update_regs", 0);
+			/* add update bw : cur < prev */
+			decon->bts.ops->bts_update_bw(decon, regs, 1);
+			decon_dpp_stop(decon, false);
+			return;
+		}
 		if (!regs->num_of_window) {
 			__decon_update_clear(decon, regs);
 			decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
@@ -2311,6 +2368,19 @@ video_emul_check_done:
 		if (decon_is_bypass(decon))
 			goto end;
 #endif
+		/*
+		 * External DP (decon2): a stalled shadow update (e.g. DP video
+		 * not running yet, sink dropped mid-frame) must not panic the
+		 * whole phone. Drop the frame and keep fences moving; the next
+		 * WIN_CONFIG retries. Primary DSI keeps the stock BUG().
+		 */
+		if (decon->dt.out_type == DECON_OUT_DP) {
+			decon_warn("decon-%d DP shadow timeout - drop frame (shd=0x%x run=%d)\n",
+					decon->id,
+					decon_read(decon->id, SHADOW_REG_UPDATE_REQ),
+					decon_reg_get_run_status(decon->id));
+			goto end;
+		}
 		decon_up_list_saved();
 		decon_dump_afbc_handle(decon, old_dma_bufs);
 		decon_dump(decon, REQ_DSI_DUMP);

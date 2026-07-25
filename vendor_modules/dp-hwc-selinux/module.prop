@@ -1,0 +1,6 @@
+id=dp-hwc-selinux
+name=DP HWC SELinux fix
+version=v1.0
+versionCode=10
+author=local
+description=Label 11090000.displayport cable for HWC ExternalDisplay HPD (Phase A)

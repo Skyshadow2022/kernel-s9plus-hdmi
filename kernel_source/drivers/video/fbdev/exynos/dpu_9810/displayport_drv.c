@@ -1108,8 +1108,33 @@ void displayport_hwc_takeover(void)
 
 	if (!displayport || !displayport->hpd_current_state)
 		return;
-	if (displayport->state != DISPLAYPORT_STATE_ON ||
-	    !displayport->bist_used)
+
+	if (displayport->state != DISPLAYPORT_STATE_ON) {
+		/*
+		 * HWC won the HPD race: WIN_CONFIG arrived while hpd_changed is
+		 * still inside its hpd_wait_ms wait and nothing has enabled DP
+		 * video yet. decon2 can sit in ON state from boot (enable with
+		 * hpd low is a no-op for DP), so unblank never re-fires
+		 * s_stream → displayport_enable. Without video running, decon2
+		 * shadow updates never latch (HW_TRIG has no vsync source) →
+		 * shadow timeout → panic. Enabling here sets state ON and wakes
+		 * dp_wait, so the BIST fallback in hpd_changed is skipped.
+		 */
+		displayport_live_trig_stop();
+		displayport->bist_used = 0;
+		/* PRESET normally chose cur_video; fall back if still default */
+		if (displayport->cur_video <= V640X480P60 &&
+		    displayport->best_video < supported_videos_pre_cnt)
+			displayport->cur_video = displayport->best_video;
+		displayport_info("HWC takeover: enable live %s for WIN_CONFIG\n",
+				supported_videos[displayport->cur_video].name);
+		displayport_enable(displayport);
+		displayport_reg_set_interrupt_mask(VIDEO_FIFO_UNDER_FLOW_MASK, 0);
+		displayport_live_trig_start();
+		return;
+	}
+
+	if (!displayport->bist_used)
 		return;
 
 	displayport_info("HWC takeover: BIST → live for WIN_CONFIG\n");
@@ -2606,6 +2631,8 @@ static int displayport_enable(struct displayport_device *displayport)
 			displayport_reg_start();
 			displayport_reg_set_stream_valid_force(1);
 			mutex_unlock(&displayport->cmd_lock);
+			/* Pump decon2 trig — HW_TRIG alone never latches shadow */
+			displayport_live_trig_start();
 			return 0;
 		}
 		displayport_err("ignore enable, state:%d\n", displayport->state);
@@ -2660,6 +2687,15 @@ static int displayport_enable(struct displayport_device *displayport)
 	wake_up_interruptible(&displayport->dp_wait);
 	hdcp_start(displayport);
 	mutex_unlock(&displayport->cmd_lock);
+
+	/*
+	 * Live (HWC) path: pump decon2's trigger every 16ms. Plain HW_TRIG
+	 * never latches decon2 shadow updates on this setup (every WIN_CONFIG
+	 * hits SHADOW_UPDATE_TIMEOUT) — the same arm_decon_trig pump is what
+	 * made winmap frames latch. live_trig_fn self-stops on BIST/unplug.
+	 */
+	if (!displayport->bist_used)
+		displayport_live_trig_start();
 
 	return ret;
 }

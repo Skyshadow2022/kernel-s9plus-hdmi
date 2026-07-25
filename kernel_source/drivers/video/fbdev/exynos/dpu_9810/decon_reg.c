@@ -779,6 +779,29 @@ void decon_reg_set_trigger(u32 id, struct decon_mode_info *psr,
 	    psr->out_type != DECON_OUT_DP)
 		return;
 
+	/*
+	 * DECON2/DP has no hardware TE. Plain HW_TRIG_EN never fires, so every
+	 * per-frame SHADOW_REG_UPDATE_REQ times out (black HDMI + FIFO
+	 * underflow) even though DPP/IDMA feed real buffers. Drive the DECON's
+	 * internal periodic trigger timer instead — the same HW_SW_TRIG_TIMER
+	 * combo that made winmap frames latch — so shadow updates self-retire
+	 * each frame. Keep it running on DISABLE (only drop the one-shot
+	 * SW_TRIG bit); killing the timer would re-stall the next frame.
+	 */
+	if (psr->out_type == DECON_OUT_DP) {
+		if (en == DECON_TRIG_ENABLE) {
+			decon_write(id, HW_SW_TRIG_TIMER, 0x40000);
+			val = HW_TRIG_EN | SW_TRIG_EN | HW_SW_TRIG_TIMER_EN |
+					HW_TRIG_ACTIVE_VALUE;
+			mask = val;
+		} else {
+			val = 0;
+			mask = SW_TRIG_EN;
+		}
+		decon_write_mask(id, HW_SW_TRIG_CONTROL, val, mask);
+		return;
+	}
+
 	if (psr->trig_mode == DECON_SW_TRIG) {
 		val = (en == DECON_TRIG_ENABLE) ? SW_TRIG_EN : 0;
 		mask = HW_TRIG_EN | SW_TRIG_EN;
