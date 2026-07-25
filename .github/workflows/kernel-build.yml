@@ -1,0 +1,113 @@
+name: Kernel Build
+
+# Full Image build is heavy; run manually from Actions → Run workflow.
+# Needs ~30–90 min and downloads AOSP clang + aarch64 GCC.
+
+on:
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: "Parallel make jobs"
+        required: false
+        default: "4"
+
+concurrency:
+  group: kernel-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    env:
+      ARCH: arm64
+      SUBARCH: arm64
+      ANDROID_VERSION: "130000"
+      ANDROID_MAJOR_VERSION: t
+      CLANG_VERSION: r487747c
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install host packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bison flex bc libssl-dev libelf-dev \
+            python3 wget curl xz-utils build-essential
+
+      - name: Cache toolchains
+        uses: actions/cache@v4
+        with:
+          path: |
+            toolchains/clang
+            toolchains/gcc-arm64
+          key: tc-${{ env.CLANG_VERSION }}-gcc-9.0.1-r1
+
+      - name: Fetch AOSP clang (if missing)
+        run: |
+          set -euo pipefail
+          if [[ -x toolchains/clang/bin/clang ]]; then
+            echo "clang cache hit"
+            exit 0
+          fi
+          mkdir -p toolchains
+          # Google clang prebuilt used by many Android 13 trees
+          URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/llvm-r487747/clang-r487747c.tar.gz"
+          echo "Downloading clang from googlesource archive…"
+          curl -L --fail --retry 3 -o /tmp/clang.tgz "$URL" || \
+            curl -L --fail --retry 3 -o /tmp/clang.tgz \
+              "https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r487747c/archive/refs/heads/lineage-20.0.tar.gz"
+          mkdir -p toolchains/clang
+          tar -xzf /tmp/clang.tgz -C toolchains/clang --strip-components=1 2>/dev/null || \
+            tar -xzf /tmp/clang.tgz -C toolchains/clang
+          test -x toolchains/clang/bin/clang
+
+      - name: Fetch aarch64 GCC (if missing)
+        run: |
+          set -euo pipefail
+          if [[ -x toolchains/gcc-arm64/bin/aarch64-linux-android-gcc ]]; then
+            echo "gcc cache hit"
+            exit 0
+          fi
+          mkdir -p toolchains/gcc-arm64
+          # Common Lineage/AOSP gcc 4.9 style prebuilt
+          curl -L --fail --retry 3 -o /tmp/gcc.tgz \
+            "https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/+archive/refs/heads/master.tar.gz"
+          tar -xzf /tmp/gcc.tgz -C toolchains/gcc-arm64
+          # Some archives nest one level
+          if [[ ! -x toolchains/gcc-arm64/bin/aarch64-linux-android-gcc ]]; then
+            inner=$(find toolchains/gcc-arm64 -type f -name 'aarch64-linux-android-gcc' | head -1)
+            if [[ -n "$inner" ]]; then
+              base=$(dirname "$(dirname "$inner")")
+              mkdir -p /tmp/gcc-fixed
+              cp -a "$base"/. /tmp/gcc-fixed/
+              rm -rf toolchains/gcc-arm64
+              mv /tmp/gcc-fixed toolchains/gcc-arm64
+            fi
+          fi
+          test -x toolchains/gcc-arm64/bin/aarch64-linux-android-gcc
+
+      - name: Sanity
+        run: bash scripts/ci_sanity.sh
+
+      - name: Build Image + modules
+        env:
+          CLANG_BIN: ${{ github.workspace }}/toolchains/clang/bin
+          GCC_BIN: ${{ github.workspace }}/toolchains/gcc-arm64/bin
+          JOBS: ${{ inputs.jobs }}
+        run: |
+          export PATH="$CLANG_BIN:$GCC_BIN:$PATH"
+          clang --version | head -2
+          aarch64-linux-android-gcc --version | head -2
+          ./build_gkilike.sh
+
+      - name: Upload flash zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernel-star2lte-gkilike
+          path: |
+            Kernel-star2lte-gkilike-*.zip
+            Kernel-star2lte-gkilike-NEXT.zip
+          if-no-files-found: warn
+          retention-days: 14
