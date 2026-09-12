@@ -39,7 +39,13 @@ apply_one_fragment() {
   log "Applying $frag"
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in
-      ''|\#*) continue ;;
+      '') continue ;;
+      # A real "unset this symbol" directive - must NOT be treated as a comment.
+      # The old guard skipped every '#' line, which silently discarded every
+      # "# CONFIG_X is not set" in every fragment and made the key-stripping
+      # below dead code.
+      \#\ CONFIG_*' is not set') ;;
+      \#*) continue ;;
     esac
     key="${line%%=*}"
     key="${key#\# CONFIG_}"
@@ -63,6 +69,45 @@ apply_fragment() {
     apply_one_fragment "$WIFI_FRAGMENT"
   fi
   "${MAKE[@]}" olddefconfig
+  verify_fragments
+}
+
+# olddefconfig can quietly revert a symbol (dependency not met, or a
+# "default y" winning). Without this check a fragment can be applied, ignored,
+# and the build still succeeds - which is exactly how the RBIN change was lost
+# on the first tuned build.
+verify_fragments() {
+  local frag line key want got bad=0
+  for frag in "$FRAGMENT" "$KSU_FRAGMENT" "$DP_FRAGMENT" "$PERF_FRAGMENT"               "$PERF_BATT_FRAGMENT" "$MEM_FRAGMENT"; do
+    [[ -f "$frag" ]] || continue
+    while IFS= read -r line || [ -n "$line" ]; do
+      case "$line" in
+        '') continue ;;
+        \#\ CONFIG_*' is not set') want="unset" ;;
+        \#*) continue ;;
+        *) want="set" ;;
+      esac
+      key="${line%%=*}"; key="${key#\# CONFIG_}"; key="${key#CONFIG_}"; key="${key%% *}"
+      if [[ "$want" == "unset" ]]; then
+        if grep -q "^CONFIG_${key}=" "$OUT/.config"; then
+          got="$(grep -m1 "^CONFIG_${key}=" "$OUT/.config")"
+          log "VERIFY FAIL: wanted CONFIG_${key} unset, got: $got  ($(basename "$frag"))"
+          bad=1
+        fi
+      else
+        if ! grep -qxF "$line" "$OUT/.config"; then
+          got="$(grep -m1 "^\(# \)\?CONFIG_${key}" "$OUT/.config" || echo '<absent>')"
+          log "VERIFY FAIL: wanted [$line], got: $got  ($(basename "$frag"))"
+          bad=1
+        fi
+      fi
+    done < "$frag"
+  done
+  if (( bad )); then
+    log "ERROR: one or more fragment settings did not survive olddefconfig."
+    exit 1
+  fi
+  log "All fragment settings verified in $OUT/.config"
 }
 
 build_all() {
