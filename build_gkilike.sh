@@ -29,7 +29,21 @@ export CC=clang
 export ANDROID_VERSION="${ANDROID_VERSION:-130000}"
 export ANDROID_MAJOR_VERSION="${ANDROID_MAJOR_VERSION:-t}"
 
-MAKE=(make -C "$SRC" O="$OUT" ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu-)
+# KernelSU-Next version. Its Kbuild only computes a version when KernelSU is
+# its OWN git repo, separate from the kernel tree:
+#     ifneq ($(GIT_ROOT),$(KERNEL_GIT_ROOT))
+# Here KernelSU-Next is a plain directory committed into this repo, so that
+# test fails on any clean checkout and the build silently falls back to
+# KSU_VERSION=1 / tag v0.0.1. The manager app then reports "Unsupported".
+# It works locally only because the original clone left a .git behind.
+#
+# Passing these on the make command line overrides the Kbuild's own := and
+# makes the version deterministic everywhere. 2993 is the commit count of
+# the KernelSU-Next legacy branch; Kbuild computes 30000 + it + 200 = 33193.
+KSU_GIT_VERSION="${KSU_GIT_VERSION:-2993}"
+KSU_GIT_TAG="${KSU_GIT_TAG:-v3.3.0}"
+
+MAKE=(make -C "$SRC" O="$OUT" ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu-       KSU_GIT_VERSION="$KSU_GIT_VERSION" KSU_GIT_VERSION_VALID=1 KSU_GIT_TAG="$KSU_GIT_TAG")
 
 log() { printf '[gkilike] %s\n' "$*"; }
 
@@ -120,7 +134,13 @@ verify_fragments() {
 
 build_all() {
   log "Building Image + modules (jobs=$JOBS)"
+  log "KernelSU-Next version override: $KSU_GIT_VERSION ($KSU_GIT_TAG) -> expect 33193"
   "${MAKE[@]}" -j"$JOBS" Image modules dtbs 2>&1 | tee "$ROOT/build_gkilike.log"
+  if grep -q "KernelSU-Next version fallback" "$ROOT/build_gkilike.log"; then
+    log "ERROR: KernelSU fell back to version 1 - the manager will report Unsupported."
+    exit 1
+  fi
+  grep -m1 "KernelSU-Next version:" "$ROOT/build_gkilike.log" || true
 }
 
 stage_modules() {
