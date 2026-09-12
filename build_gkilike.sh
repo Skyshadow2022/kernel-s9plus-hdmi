@@ -40,7 +40,11 @@ export ANDROID_MAJOR_VERSION="${ANDROID_MAJOR_VERSION:-t}"
 # Passing these on the make command line overrides the Kbuild's own := and
 # makes the version deterministic everywhere. 2993 is the commit count of
 # the KernelSU-Next legacy branch; Kbuild computes 30000 + it + 200 = 33193.
-KSU_GIT_VERSION="${KSU_GIT_VERSION:-2993}"
+# 2993 (the real legacy-branch commit count) yields 33193, which is 21 BELOW
+# the installed manager's versionCode 33214 - and the manager still reported
+# "Unsupported" with it. Hypothesis: the check is kernel_version >= manager
+# versionCode. 3050 yields 33250, comfortably above. Not yet confirmed.
+KSU_GIT_VERSION="${KSU_GIT_VERSION:-3050}"
 KSU_GIT_TAG="${KSU_GIT_TAG:-v3.3.0}"
 
 MAKE=(make -C "$SRC" O="$OUT" ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-android- CLANG_TRIPLE=aarch64-linux-gnu-       KSU_GIT_VERSION="$KSU_GIT_VERSION" KSU_GIT_VERSION_VALID=1 KSU_GIT_TAG="$KSU_GIT_TAG")
@@ -134,7 +138,7 @@ verify_fragments() {
 
 build_all() {
   log "Building Image + modules (jobs=$JOBS)"
-  log "KernelSU-Next version override: $KSU_GIT_VERSION ($KSU_GIT_TAG) -> expect 33193"
+  log "KernelSU-Next version override: $KSU_GIT_VERSION ($KSU_GIT_TAG) -> expect 33250"
   "${MAKE[@]}" -j"$JOBS" Image modules dtbs 2>&1 | tee "$ROOT/build_gkilike.log"
   if grep -q "KernelSU-Next version fallback" "$ROOT/build_gkilike.log"; then
     log "ERROR: KernelSU fell back to version 1 - the manager will report Unsupported."
