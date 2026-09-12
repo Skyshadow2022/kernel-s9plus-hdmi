@@ -2,6 +2,7 @@
 #include <linux/fs.h>
 #include <linux/namei.h>
 #include <linux/printk.h>
+#include <linux/version.h>
 
 #include "policy/allowlist.h"
 #include "klog.h" // IWYU pragma: keep
@@ -67,6 +68,13 @@ void on_boot_completed(void)
 {
     ksu_boot_completed = true;
     pr_info("on_boot_completed!\n");
+    // On kernels < 5.9 the packages.list fsnotify observer is a no-op, so the
+    // manager is never re-scanned after boot unless we do a full track_throne
+    // here. prune_only=true left Manager permanently "Unsupported" on 4.9.
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
+    track_throne(false);
+#else
     track_throne(true);
+#endif
     ksu_avc_spoof_late_init();
 }

@@ -90,11 +90,18 @@ static int ksu_inode_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 	// atomic_xchg swaps the value to 0 and returns the old value.
 	// If the old value was 1, we are the first thread to reach here.
+	// On kernels < 5.9 there is no packages.list fsnotify observer, so a
+	// prune-only first pass would leave a post-boot Manager install uncrowned.
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
+	(void)atomic_xchg(&first_time, 0);
+	track_throne(false);
+#else
 	if (atomic_xchg(&first_time, 0) == 1) {
 		track_throne(true);
 	} else {
 		track_throne(false);
 	}
+#endif
 
 	return 0;
 }

@@ -5,7 +5,12 @@ CONFIG_KSU_MANUAL_HOOK=y
 # CONFIG_KSU_DEBUG is not set
 # CONFIG_KPROBES is not set
 CONFIG_OVERLAY_FS=y
-# Was "-decon-gkilike-ksun-dp". "ksun" named KernelSU Next in plain text in
-# uname -r, readable by any app with no privileges - a free detection vector.
-# "decon"/"dp" also fingerprinted this specific build.
-CONFIG_LOCALVERSION="-android13-8-g0123456789ab"
+# LOCALVERSION must NOT match the GKI uname pattern:
+#   w.x.y-androidZ-K   (e.g. 5.10.101-android13-0)
+# libvintf/libkver parses that as a GKI release and sets kernel FCM level
+# from Android Z (13 → level 7). Our device manifest is target-level 3 on
+# a legacy 4.9 kernel, so a fake GKI string makes
+# VintfObject.verifyWithoutAvb() return 1 and PE shows
+# "internal problem / contact manufacturer" every boot.
+# Avoid "ksu"/"ksun"/"decon"/"dp" tokens (app-visible in uname -r).
+CONFIG_LOCALVERSION="-aosp13-8-g0123456789ab"

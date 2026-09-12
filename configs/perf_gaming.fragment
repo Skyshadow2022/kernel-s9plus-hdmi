@@ -1,0 +1,12 @@
+# Gaming / interactivity oriented (Exynos 9810, PE13, COD Mobile etc.)
+# Safe: no OC tables, no undervolt, no SELinux permissive.
+#
+# HZ 300: slightly tighter timer for touch/UI/game loops vs stock 250.
+# Measurable latency win; small idle-power cost on 4.9.
+# CONFIG_HZ_250 is not set
+CONFIG_HZ_300=y
+CONFIG_HZ=300
+# Autogroup helps foreground games vs background reclaim/sync noise.
+CONFIG_SCHED_AUTOGROUP=y
+# Keep workqueues eager (already preferred for interactivity).
+# CONFIG_WQ_POWER_EFFICIENT_DEFAULT is not set

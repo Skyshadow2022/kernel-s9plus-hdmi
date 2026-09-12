@@ -1,0 +1,9 @@
+# AOSP / PE13 VINTF (framework FCM level 3+) expected netfilter/BPF set.
+# Matches android-4.9 android-base + PE FCM conditional fragments:
+# when QTAGUID=n, OWNER=y and NET_CLS_BPF=y are required.
+# Also the modern AOSP traffic path (eBPF) — xt_qtaguid is deprecated.
+# CONFIG_NETFILTER_XT_MATCH_QTAGUID is not set
+CONFIG_NETFILTER_XT_MATCH_OWNER=y
+CONFIG_NET_CLS_BPF=y
+# Keep netd able to pin BPF maps on 4.9 (AOSP android-recommended)
+# CONFIG_BPF_UNPRIV_DEFAULT_OFF is not set
