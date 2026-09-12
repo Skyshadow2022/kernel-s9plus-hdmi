@@ -1,0 +1,19 @@
+# Memory / ION - fixes the order-4 allocation failures
+# Measured 2026-09-12: 58x "page allocation failure: order:4" in 150s from
+# ion_system_heap_allocate, SystemHeapPool at 0kB, 353904kB parked in free_rbin,
+# compact_fail 1.6/s vs compact_success 1.9/s.
+#
+# RBIN is Samsung's reserved camera pool. The general allocator cannot use it.
+# Dropping it returns ~350MB to the normal zone on a 5.8GB device.
+# >>> TEST THE CAMERA IMMEDIATELY AFTER FLASHING. This is what it can break. <<<
+# CONFIG_RBIN is not set
+# CONFIG_ION_RBIN_HEAP is not set
+
+# Stop anon and file reclaim fighting each other under swap pressure
+CONFIG_BALANCE_ANON_FILE_RECLAIM=y
+
+# Let cold compressed pages spill to disk instead of pinning RAM.
+# Keep lz4: measured 3.3:1 at 434 pages/s out - zstd costs more CPU per page
+# than this swap rate can afford.
+CONFIG_ZRAM_WRITEBACK=y
+CONFIG_CRYPTO_LZ4=y
