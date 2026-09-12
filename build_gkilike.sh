@@ -12,6 +12,7 @@ KSU_FRAGMENT="$ROOT/configs/kernelsu.fragment"
 DP_FRAGMENT="$ROOT/configs/displayport.fragment"
 PERF_FRAGMENT="$ROOT/configs/perf_net.fragment"
 PERF_BATT_FRAGMENT="$ROOT/configs/perf_batt.fragment"
+MEM_FRAGMENT="$ROOT/configs/mem_ion.fragment"
 # Opt-in: ENABLE_WIFI_MODULE=1 ./build_gkilike.sh
 WIFI_FRAGMENT="$ROOT/configs/gkilike_wifi.fragment"
 JOBS="${JOBS:-$(nproc)}"
@@ -56,6 +57,7 @@ apply_fragment() {
   apply_one_fragment "$DP_FRAGMENT"
   apply_one_fragment "$PERF_FRAGMENT"
   apply_one_fragment "$PERF_BATT_FRAGMENT"
+  apply_one_fragment "$MEM_FRAGMENT"
   if [[ "${ENABLE_WIFI_MODULE:-0}" == "1" ]]; then
     log "ENABLE_WIFI_MODULE=1 → applying Wi-Fi modular pilot"
     apply_one_fragment "$WIFI_FRAGMENT"
@@ -65,7 +67,7 @@ apply_fragment() {
 
 build_all() {
   log "Building Image + modules (jobs=$JOBS)"
-  "${MAKE[@]}" -j"$JOBS" Image modules 2>&1 | tee "$ROOT/build_gkilike.log"
+  "${MAKE[@]}" -j"$JOBS" Image modules dtbs 2>&1 | tee "$ROOT/build_gkilike.log"
 }
 
 stage_modules() {
