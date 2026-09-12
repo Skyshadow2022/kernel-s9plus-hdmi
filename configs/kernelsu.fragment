@@ -5,4 +5,7 @@ CONFIG_KSU_MANUAL_HOOK=y
 # CONFIG_KSU_DEBUG is not set
 # CONFIG_KPROBES is not set
 CONFIG_OVERLAY_FS=y
-CONFIG_LOCALVERSION="-decon-gkilike-ksun-dp"
+# Was "-decon-gkilike-ksun-dp". "ksun" named KernelSU Next in plain text in
+# uname -r, readable by any app with no privileges - a free detection vector.
+# "decon"/"dp" also fingerprinted this specific build.
+CONFIG_LOCALVERSION="-android13-8-g0123456789ab"
