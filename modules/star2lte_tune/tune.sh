@@ -11,13 +11,9 @@ CONF=/data/adb/star2lte_tune.conf
 #   balanced : partial unlock (2.1GHz), mild GPU bump
 #   battery  : leave thermal HAL caps alone
 PROFILE=gaming
-UNLOCK_BIG_CORES=1
-# Cap for big cluster when unlocked. Full silicon max is 2704000; 2314000 is
-# a good COD Mobile compromise (less thermal throttle than full unlock).
-BIG_MAX_FREQ=2314000
+# Profile-independent defaults
 LITTLE_MIN_FREQ=598000
 BIG_MIN_FREQ=741000
-SWAPPINESS=60
 PAGE_CLUSTER=0
 MIN_FREE_KB=""
 EXTRA_FREE_KB=""
@@ -26,37 +22,34 @@ VFS_CACHE_PRESSURE=50
 TUNE_NET=1
 IO_SCHED=cfq
 # schedutil: lower = snappier frequency ramp for games (us)
-SCHEDUTIL_UP_RATE=1000
 SCHEDUTIL_DOWN_RATE=20000
 # Mali-G72 Interactive floor (kHz). Table: 260 299 338 455 546 572
-GPU_MIN_CLOCK=338000
 GPU_GOVERNOR=Interactive
 GPU_POWEROFF_DELAY=5
+
+# Pass 1: read CONF only to learn which PROFILE was chosen.
 [ -f "$CONF" ] && . "$CONF"
 
-# Profile presets (CONF can still override after)
+# Profile presets, assigned unconditionally.
+#
+# The previous form was BIG_MAX_FREQ=${BIG_MAX_FREQ:-2106000}. ${VAR:-x} only
+# substitutes x when VAR is empty, and every one of these was already set a
+# few lines up - so PROFILE=balanced and PROFILE=battery silently kept the
+# gaming numbers (2314000 / swappiness 60). Tested: all three profiles
+# produced identical values except UNLOCK_BIG_CORES.
+PROFILE_UNKNOWN=""
 case "$PROFILE" in
-  gaming)
-    UNLOCK_BIG_CORES=1
-    BIG_MAX_FREQ=${BIG_MAX_FREQ:-2314000}
-    SWAPPINESS=${SWAPPINESS:-60}
-    SCHEDUTIL_UP_RATE=${SCHEDUTIL_UP_RATE:-1000}
-    GPU_MIN_CLOCK=${GPU_MIN_CLOCK:-338000}
-    ;;
-  balanced)
-    UNLOCK_BIG_CORES=1
-    BIG_MAX_FREQ=${BIG_MAX_FREQ:-2106000}
-    SWAPPINESS=${SWAPPINESS:-70}
-    SCHEDUTIL_UP_RATE=${SCHEDUTIL_UP_RATE:-2000}
-    GPU_MIN_CLOCK=${GPU_MIN_CLOCK:-299000}
-    ;;
-  battery)
-    UNLOCK_BIG_CORES=0
-    SWAPPINESS=${SWAPPINESS:-80}
-    SCHEDUTIL_UP_RATE=${SCHEDUTIL_UP_RATE:-5000}
-    GPU_MIN_CLOCK=${GPU_MIN_CLOCK:-260000}
-    ;;
+  gaming)   UNLOCK_BIG_CORES=1; BIG_MAX_FREQ=2314000; SWAPPINESS=60; SCHEDUTIL_UP_RATE=1000; GPU_MIN_CLOCK=338000 ;;
+  balanced) UNLOCK_BIG_CORES=1; BIG_MAX_FREQ=2106000; SWAPPINESS=70; SCHEDUTIL_UP_RATE=2000; GPU_MIN_CLOCK=299000 ;;
+  battery)  UNLOCK_BIG_CORES=0; BIG_MAX_FREQ="";      SWAPPINESS=80; SCHEDUTIL_UP_RATE=5000; GPU_MIN_CLOCK=260000 ;;
+  *)        PROFILE_UNKNOWN="$PROFILE"; PROFILE=gaming
+            UNLOCK_BIG_CORES=1; BIG_MAX_FREQ=2314000; SWAPPINESS=60; SCHEDUTIL_UP_RATE=1000; GPU_MIN_CLOCK=338000 ;;
 esac
+
+# Pass 2: explicit values in CONF win over the preset.
+[ -f "$CONF" ] && . "$CONF"
+# Pass 2 re-reads the typo too; keep the label honest about what ran.
+[ -n "$PROFILE_UNKNOWN" ] && PROFILE=gaming
 
 log() { echo "$(date '+%H:%M:%S') $*" >> "$LOG"; }
 
@@ -74,6 +67,7 @@ w() {
 : > "$LOG"
 log "=== star2lte-tune start ==="
 log "kernel: $(uname -r) profile=$PROFILE"
+[ -n "$PROFILE_UNKNOWN" ] && log "WARN unknown PROFILE=$PROFILE_UNKNOWN - fell back to gaming"
 
 # ---------------------------------------------------------------
 # 1. Memory reclaim
