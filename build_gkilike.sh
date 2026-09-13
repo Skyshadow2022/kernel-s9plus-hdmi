@@ -197,7 +197,21 @@ package_zip() {
   [[ -f "$dtb" ]] || { log "ERROR: missing $dtb"; exit 1; }
 
   cp -av "$img" "$AK/Image"
-  cp -av "$dtb" "$AK/dtb"
+  # Samsung boot EXTRA is DTBH-wrapped, not raw dtc output. Wrapping prevents
+  # AK3 from replacing a good EXTRA with a naked .dtb (audio/ABOX breakage).
+  pack="$ROOT/scripts/pack_exynos_dtbh.sh"
+  template="$ROOT/reference/BOOT-68-extra.dtbh"
+  if [[ -x "$pack" || -f "$pack" ]]; then
+    chmod +x "$pack" || true
+    if [[ -f "$template" ]]; then
+      bash "$pack" "$dtb" "$AK/dtb" "$template"
+    else
+      bash "$pack" "$dtb" "$AK/dtb"
+    fi
+  else
+    log "WARNING: pack_exynos_dtbh.sh missing - shipping raw dtb (unsafe for EXTRA)"
+    cp -av "$dtb" "$AK/dtb"
+  fi
 
   (
     cd "$AK"
