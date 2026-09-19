@@ -1,0 +1,16 @@
+# SUSFS v2.2.0 (non-GKI backport, DS-ACK lineage) - applied after the
+# kernel-side patch and the KernelSU-Next driver port are in place.
+# v2 dropped HAS_MAGIC_MOUNT / AUTO_ADD_* / TRY_UMOUNT (v1.x symbols) and
+# added SUS_MAP. Verify after configure:
+#     grep KSU_SUSFS out/.config
+CONFIG_KSU_SUSFS=y
+CONFIG_KSU_SUSFS_SUS_PATH=y
+CONFIG_KSU_SUSFS_SUS_MOUNT=y
+CONFIG_KSU_SUSFS_SUS_KSTAT=y
+CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+# Kernel-side logging defeats the point of hiding.
+# CONFIG_KSU_SUSFS_ENABLE_LOG is not set
+CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+CONFIG_KSU_SUSFS_SUS_MAP=y

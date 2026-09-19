@@ -195,6 +195,13 @@ static int apply_kernelsu_rules_fn(void *ptr)
 void apply_kernelsu_rules()
 {
 	struct policydb *db;
+#ifdef CONFIG_KSU_SUSFS
+	/* The policy is loaded at this point, so the contexts resolve. */
+	susfs_set_priv_app_sid();
+	susfs_set_init_sid();
+	susfs_set_ksu_sid();
+	susfs_set_zygote_sid();
+#endif
 
 	if (!getenforce()) {
 		pr_info("SELinux permissive or disabled, apply rules!\n");

@@ -1,0 +1,6 @@
+id=star2lte_susfs
+name=star2lte SUSFS Hide
+version=v1.0
+versionCode=1
+author=mehran
+description=Applies a banking-app/root-detector hiding policy on every boot using the SUSFS v2.2.0 kernel feature: stock-looking uname, /proc/cmdline with bootloader-state leaks rewritten, sus_path on /data/adb*, AVC log spoofing. Requires the SUSFS kernel. Policy, not magic: Play Integrity still needs a working PIF/TrickyStore.

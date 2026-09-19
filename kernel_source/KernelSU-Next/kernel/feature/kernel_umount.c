@@ -21,6 +21,10 @@
 #include "runtime/ksud_boot.h"
 #include "ksu.h"
 #include "compat/kernel_compat.h"
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs_def.h>
+extern struct work_struct susfs_extra_works;
+#endif // #ifdef CONFIG_KSU_SUSFS
 
 static bool ksu_kernel_umount_enabled = true;
 
@@ -160,6 +164,14 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 	}
 	// umount the target mnt
 	pr_info("handle umount for uid: %d, pid: %d\n", new_uid, current->pid);
+
+#ifdef CONFIG_KSU_SUSFS
+	// Past this point the process really is being umounted, which is what
+	// SUS_MOUNT keys off - so this is where it gets marked.
+	if (!work_pending(&susfs_extra_works))
+		schedule_work(&susfs_extra_works);
+	susfs_set_current_proc_umounted();
+#endif // #ifdef CONFIG_KSU_SUSFS
 
 	tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
 	if (!tw)

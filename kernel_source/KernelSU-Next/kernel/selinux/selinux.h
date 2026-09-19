@@ -65,4 +65,26 @@ void escape_to_root_for_adb_root();
 
 extern u32 ksu_file_sid;
 
+#ifdef CONFIG_KSU_SUSFS
+/* SUSFS expects these predicates; ours are thin wrappers over the cached-SID
+ * helpers above rather than SUSFS's own duplicate SID table. */
+bool susfs_is_current_ksu_domain(void);
+bool susfs_is_current_zygote_domain(void);
+bool susfs_is_current_init_domain(void);
+u32 susfs_get_current_sid(void);
+bool susfs_is_sid_equal(const struct cred *cred, u32 sid2);
+
+/* SID variables security/selinux/avc.c (AVC log spoofing) reads. Defined in
+ * selinux.c, resolved once the policy is loaded - see apply_kernelsu_rules. */
+extern u32 susfs_ksu_sid;
+extern u32 susfs_init_sid;
+extern u32 susfs_zygote_sid;
+extern u32 susfs_priv_app_sid;
+void susfs_set_ksu_sid(void);
+void susfs_set_init_sid(void);
+void susfs_set_zygote_sid(void);
+void susfs_set_priv_app_sid(void);
+#endif // #ifdef CONFIG_KSU_SUSFS
+
+
 #endif

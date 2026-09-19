@@ -263,3 +263,88 @@ void escape_to_root_for_adb_root(void)
     }
     commit_creds(cred);
 }
+
+#ifdef CONFIG_KSU_SUSFS
+/*
+ * SUSFS v2 asks the KernelSU driver for these. This tree already caches the
+ * SIDs it needs via cache_sid()/is_ksu_domain()/is_zygote()/is_init(), so these
+ * are wrappers rather than a second SID table - one source of truth for what
+ * "the KernelSU domain" means.
+ */
+bool susfs_is_current_ksu_domain(void)
+{
+	return is_ksu_domain();
+}
+
+bool susfs_is_current_zygote_domain(void)
+{
+	return is_zygote(current_cred());
+}
+
+bool susfs_is_current_init_domain(void)
+{
+	return is_init(current_cred());
+}
+
+u32 susfs_get_current_sid(void)
+{
+	return current_sid();
+}
+
+bool susfs_is_sid_equal(const struct cred *cred, u32 sid2)
+{
+	const taskcred_sec_t *tsec = selinux_cred(cred);
+
+	if (!tsec)
+		return false;
+	return tsec->sid == sid2;
+}
+#endif // #ifdef CONFIG_KSU_SUSFS\n
+#ifdef CONFIG_KSU_SUSFS
+/* Resolved SIDs for the contexts SUSFS and the AVC log spoof compare against.
+ * 0 means "not resolved yet"; security/selinux/avc.c treats a 0 match as
+ * "never" so an unresolved SID only disables the feature, never breaks it. */
+u32 susfs_ksu_sid = 0;
+u32 susfs_init_sid = 0;
+u32 susfs_zygote_sid = 0;
+u32 susfs_priv_app_sid = 0;
+
+#define SUSFS_PRIV_APP_DOMAIN "u:r:priv_app:s0:c512,c768"
+
+static void susfs_set_sid(const char *secctx_name, u32 *out_sid)
+{
+	int err;
+
+	if (!secctx_name || !out_sid)
+		return;
+
+	err = security_secctx_to_secid(secctx_name, strlen(secctx_name),
+				       out_sid);
+	if (err) {
+		pr_err("susfs: failed setting sid for '%s', err: %d\n",
+		       secctx_name, err);
+		return;
+	}
+	pr_info("susfs: sid '%u' set for '%s'\n", *out_sid, secctx_name);
+}
+
+void susfs_set_ksu_sid(void)
+{
+	susfs_set_sid(KERNEL_SU_CONTEXT, &susfs_ksu_sid);
+}
+
+void susfs_set_init_sid(void)
+{
+	susfs_set_sid(INIT_CONTEXT, &susfs_init_sid);
+}
+
+void susfs_set_zygote_sid(void)
+{
+	susfs_set_sid(ZYGOTE_CONTEXT, &susfs_zygote_sid);
+}
+
+void susfs_set_priv_app_sid(void)
+{
+	susfs_set_sid(SUSFS_PRIV_APP_DOMAIN, &susfs_priv_app_sid);
+}
+#endif // #ifdef CONFIG_KSU_SUSFS

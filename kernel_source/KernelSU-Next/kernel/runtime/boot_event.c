@@ -6,6 +6,9 @@
 
 #include "policy/allowlist.h"
 #include "klog.h" // IWYU pragma: keep
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+#endif
 #include "runtime/ksud_boot.h"
 #include "runtime/ksud.h"
 #include "manager/manager_observer.h"
@@ -66,6 +69,9 @@ void on_module_mounted(void)
 
 void on_boot_completed(void)
 {
+#ifdef CONFIG_KSU_SUSFS
+    susfs_start_sdcard_monitor_fn();
+#endif
     ksu_boot_completed = true;
     pr_info("on_boot_completed!\n");
     // On kernels < 5.9 the packages.list fsnotify observer is a no-op, so the
