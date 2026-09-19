@@ -141,6 +141,12 @@ verify_fragments() {
 }
 
 build_all() {
+  # The kernel embeds the config for /proc/config.gz, but the rule that
+  # regenerates kernel/config_data.gz does not always fire on incremental
+  # builds (observed 2026-09-19: a running kernel served a 6-day-old config
+  # while the real one had changed). A stale embedded config makes
+  # /proc/config.gz lie, which has already cost one misdiagnosis.
+  rm -f "$OUT/kernel/config_data.gz"
   log "Building Image + modules (jobs=$JOBS)"
   log "KernelSU-Next version override: $KSU_GIT_VERSION ($KSU_GIT_TAG) -> expect 33250"
   "${MAKE[@]}" -j"$JOBS" Image modules dtbs 2>&1 | tee "$ROOT/build_gkilike.log"
@@ -197,15 +203,25 @@ package_zip() {
   [[ -f "$dtb" ]] || { log "ERROR: missing $dtb"; exit 1; }
 
   cp -av "$img" "$AK/Image"
-  cp -av "$dtb" "$AK/dtb"
+
+  # The bootloader reads the Device Tree from the DTBH blob in the boot image's
+  # "extra" region, not from a separate dtb region - a header v0 image has no
+  # dtb_size field to point at one. Ship the DTB wrapped in a DTBH table and
+  # name it "dt": ak3-core.sh:319 is `[ "$dt" -a -f extra ] && cp -f $dt extra`,
+  # which is the only path that actually replaces what the bootloader reads.
+  # See KERNEL-REFERENCE.md section 2.
+  [[ -f "$AK/dtbh-header.bin" ]] || { log "ERROR: missing $AK/dtbh-header.bin"; exit 1; }
+  python3 "$ROOT/tools/bootimg_dtb.py" --assemble "$AK/dtbh-header.bin" "$dtb" "$AK/dt" \
+    || { log "ERROR: could not assemble the DTBH blob"; exit 1; }
+  rm -f "$AK/dtb"
 
   (
     cd "$AK"
     rm -f "$ROOT/$zipname"
     zip -r9 "$ROOT/$zipname" \
-      META-INF anykernel.sh Image dtb tools modules patch ramdisk \
+      META-INF anykernel.sh Image dt tools modules patch ramdisk \
       -x '*/.git/*' '*/placeholder' 2>/dev/null || \
-    zip -r9 "$ROOT/$zipname" META-INF anykernel.sh Image dtb tools modules
+    zip -r9 "$ROOT/$zipname" META-INF anykernel.sh Image dt tools modules
   )
   log "Packaged $ROOT/$zipname"
   ls -lh "$ROOT/$zipname"
