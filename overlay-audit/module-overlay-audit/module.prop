@@ -1,0 +1,6 @@
+id=star2lte_audit
+name=star2lte Overlay Auditor
+version=v1.0
+versionCode=1
+author=mehran
+description=READ-ONLY. Maps every file in the /vendor overlayfs upper to the module that owns it, and flags orphans, stale copies, driver shadows and boot-critical whiteouts. Its ACTION button only prints a report - it never moves or deletes anything.
