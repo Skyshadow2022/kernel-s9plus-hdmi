@@ -7,6 +7,27 @@ Legend: ✅ verified on device · ⚠️ flashed, problem found · ❌ never fla
 
 ---
 
+## [20260919-2314] — 2026-09-19 — GOLDEN BUILD ✅ CURRENT ON DEVICE
+
+`Kernel-star2lte-gkilike-20260919-2314-SUSFS-golden.zip` · sha256 `3973a663…` ·
+artifact branch `releases/sound-verified/`.
+
+- **The new reproducible lineage.** Incremental build from the current `out/`
+  (inherited from the 0842 clean state) + SUSFS source (susfs branch merged
+  with tune-2026-09-12: their DTS big-cluster ceiling 2314, smoke.sh, remote
+  fixes) + touch BUILTIN + SUSFS config.
+- Smoke PASS: Star-Madera card, cs47l92 codecs, DTB VG1, KSU 33250 crowned,
+  SUSFS policy live (uname 4.9.219, cmdline green, sus_path, avc spoof), zero
+  audio HAL errors, pstore present.
+- **`out/` archived as the golden lineage**:
+  `out-golden-20260919-2314.tar.zst` (135 MB) — restore with
+  `tar --zstd -xf` (or gzip variant) before ANY future kernel build; never
+  `make clean`.
+- SUSFS is now on the MAIN line (branch susfs-v2-experiment = master going
+  forward); the old 0206 backup kept at `/cache/BOOT-backup-0206sound.img`.
+
+---
+
 ## [20260919-0206] — 2026-09-19 — SUSFS v2.2.0 release ✅ CURRENT ON DEVICE
 
 `Kernel-star2lte-gkilike-20260919-0206.zip` · sha256 `a85133e2…` · branch
