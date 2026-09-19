@@ -1,3 +1,4 @@
 faf07bc6d57ff3e7c66bf0dd7ac92ef6be68ec5dceab9bbebf641adbec77b013  boot-star2lte-sound-verified.img
 c62f70b9336ddc75c444223d569b8b8142786ed3ccb17f1641082bf6e01a7af9  Kernel-star2lte-gkilike-20260919-0842.zip
 a85133e2cd70048f466c6b943706b0d046ec098b14cc1ef243905dd1ec39a8a6  Kernel-star2lte-gkilike-20260919-0206-SUSFS.zip
+3973a663cd0563c0c180da8548cf8bb9e661da92b3e137f516a8a08cfc777ecd  Kernel-star2lte-gkilike-20260919-2314-SUSFS-golden.zip
