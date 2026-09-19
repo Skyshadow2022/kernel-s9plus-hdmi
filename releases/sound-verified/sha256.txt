@@ -1,1 +1,2 @@
 faf07bc6d57ff3e7c66bf0dd7ac92ef6be68ec5dceab9bbebf641adbec77b013  boot-star2lte-sound-verified.img
+c62f70b9336ddc75c444223d569b8b8142786ed3ccb17f1641082bf6e01a7af9  Kernel-star2lte-gkilike-20260919-0842.zip
