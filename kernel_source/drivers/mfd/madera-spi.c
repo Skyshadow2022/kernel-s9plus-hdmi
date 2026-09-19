@@ -28,6 +28,9 @@ static int madera_spi_probe(struct spi_device *spi)
 	unsigned long type;
 	int ret;
 
+	pr_info("[audio-dbg] madera_spi_probe: ENTRY %s modalias=%s\n",
+		dev_name(&spi->dev), spi->modalias);
+
 	if (spi->dev.of_node)
 		type = madera_get_type_from_of(&spi->dev);
 	else
@@ -97,6 +100,7 @@ static int madera_spi_probe(struct spi_device *spi)
 	madera->type = type;
 	madera->dev = &spi->dev;
 	madera->irq = spi->irq;
+	pr_info("[audio-dbg] madera_spi_probe: type=%ld resolved, calling dev_init\n", type);
 
 	return madera_dev_init(madera);
 }
@@ -135,7 +139,18 @@ static struct spi_driver madera_spi_driver = {
 	.id_table	= madera_spi_ids,
 };
 
-module_spi_driver(madera_spi_driver);
+static int __init madera_spi_init(void)
+{
+	int ret = spi_register_driver(&madera_spi_driver);
+	pr_info("[audio-dbg] madera driver registered, ret=%d\n", ret);
+	return ret;
+}
+module_init(madera_spi_init);
+static void __exit madera_spi_exit(void)
+{
+	spi_unregister_driver(&madera_spi_driver);
+}
+module_exit(madera_spi_exit);
 
 MODULE_DESCRIPTION("Madera SPI bus interface");
 MODULE_AUTHOR("Richard Fitzgerald <rf@opensource.wolfsonmicro.com>");

@@ -509,6 +509,9 @@ int spi_add_device(struct spi_device *spi)
 	struct spi_master *master = spi->master;
 	struct device *dev = master->dev.parent;
 	int status;
+	pr_info("[audio-dbg] spi_add_device: %s modalias=%s of=%s\n",
+		dev_name(&spi->dev), spi->modalias,
+		spi->dev.of_node ? spi->dev.of_node->name : "none");
 
 	/* Chipselects are numbered 0..max; validate. */
 	if (spi->chip_select >= master->num_chipselect) {

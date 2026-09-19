@@ -583,7 +583,14 @@ static int __device_attach_driver(struct device_driver *drv, void *_data)
 	if (dev->driver)
 		return -EBUSY;
 
+	if (!strcmp(dev_name(dev), "spi2.0") || !strcmp(drv->name, "madera"))
+		pr_info("[audio-dbg] __device_attach_driver: dev=%s drv=%s MATCHING...\n",
+			dev_name(dev), drv->name);
+
 	ret = driver_match_device(drv, dev);
+	if (!strcmp(dev_name(dev), "spi2.0") || !strcmp(drv->name, "madera"))
+		pr_info("[audio-dbg] __device_attach_driver: dev=%s drv=%s match=%d\n",
+			dev_name(dev), drv->name, ret);
 	if (ret == 0) {
 		/* no match */
 		return 0;
@@ -641,6 +648,9 @@ static void __device_attach_async_helper(void *_dev, async_cookie_t cookie)
 static int __device_attach(struct device *dev, bool allow_async)
 {
 	int ret = 0;
+	if (!strcmp(dev_name(dev), "spi2.0"))
+		pr_info("[audio-dbg] __device_attach: %s (allow_async=%d)\n",
+			dev_name(dev), allow_async);
 
 	device_lock(dev);
 	if (dev->driver) {
@@ -770,6 +780,8 @@ static int __driver_attach(struct device *dev, void *data)
  */
 int driver_attach(struct device_driver *drv)
 {
+	if (!strcmp(drv->name, "madera"))
+		pr_info("[audio-dbg] driver_attach: %s (walking the bus)\n", drv->name);
 	return bus_for_each_dev(drv->bus, NULL, drv, __driver_attach);
 }
 EXPORT_SYMBOL_GPL(driver_attach);

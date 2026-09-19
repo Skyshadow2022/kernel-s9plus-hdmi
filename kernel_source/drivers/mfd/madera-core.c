@@ -593,6 +593,7 @@ int madera_dev_init(struct madera *madera)
 
 	dev_set_drvdata(madera->dev, madera);
 	BLOCKING_INIT_NOTIFIER_HEAD(&madera->notifier);
+	pr_info("[audio-dbg] madera_dev_init: ENTRY type=%ld\n", madera->type);
 
 	if (dev_get_platdata(madera->dev)) {
 		memcpy(&madera->pdata, dev_get_platdata(madera->dev),
@@ -716,6 +717,7 @@ int madera_dev_init(struct madera *madera)
 	}
 
 	ret = madera_wait_for_boot(madera);
+	pr_info("[audio-dbg] madera_dev_init: boot wait ret=%d\n", ret);
 	if (ret) {
 		dev_err(madera->dev, "Device failed initial boot: %d\n", ret);
 		goto err_reset;
