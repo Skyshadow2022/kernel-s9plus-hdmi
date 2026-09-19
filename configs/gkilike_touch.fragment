@@ -8,5 +8,9 @@ CONFIG_EXYNOS_DECON_FB=y
 CONFIG_EXYNOS_DECON_LCD=y
 CONFIG_EXYNOS_DECON_LCD_S6E3HA8=y
 
-# Touch pilot as loadable module
-CONFIG_TOUCHSCREEN_SEC_TS=m
+# Touch driver built INTO the kernel (was =m "gkilike pilot"). Building it in
+# removes the sec_ts_drv.ko module entirely: no ak3-helper insmod, no vermagic
+# that must be re-matched every time LOCALVERSION changes, no dead touch after
+# a kernel rename. This is how the stock Samsung kernel shipped it, and the
+# y761 firmware it needs is already present at /vendor/firmware/tsp_sec/.
+CONFIG_TOUCHSCREEN_SEC_TS=y

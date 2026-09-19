@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Overlay Auditor</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #191d24; --card2: #212733; --fg: #e8eaed;
+    --dim: #9aa4b2; --accent: #4c9aff; --good: #34c759;
+    --fair: #ffcc00; --poor: #ff6b6b; --line: #2a3140;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.45 -apple-system, "Roboto", "Segoe UI", sans-serif; }
+  body { padding: calc(14px + env(safe-area-inset-top)) 14px
+                 calc(20px + env(safe-area-inset-bottom)); }
+  h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  .top { display: flex; align-items: baseline; justify-content: space-between;
+         margin-bottom: 14px; }
+  .top .sub { color: var(--dim); font-size: 12px; font-family: ui-monospace, monospace; }
+  .card { background: var(--card); border-radius: 14px; padding: 14px;
+          margin-bottom: 12px; border: 1px solid var(--line); }
+  .verdict { font-size: 22px; font-weight: 650; margin: 0 0 4px; }
+  .verdict.good  { color: var(--good); }
+  .verdict.fair  { color: var(--fair); }
+  .verdict.poor  { color: var(--poor); }
+  .verdict .n { font-size: 28px; }
+  .sub2 { color: var(--dim); font-size: 13px; }
+  .stats { display: flex; gap: 10px; margin-top: 12px; }
+  .stat { flex: 1; background: var(--card2); border-radius: 10px; padding: 9px 10px; }
+  .stat .k { font-size: 11px; color: var(--dim); text-transform: uppercase;
+             letter-spacing: .05em; }
+  .stat .v { font-size: 19px; font-weight: 600; margin-top: 2px; }
+  .stat .v.good { color: var(--good); }
+  .stat .v.poor { color: var(--poor); }
+  .kv { display: flex; justify-content: space-between; gap: 12px;
+        padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .kv:last-child { border-bottom: 0; }
+  .kv .k { color: var(--dim); flex: 0 0 auto; }
+  .kv .v { font-family: ui-monospace, monospace; font-size: 12.5px;
+           text-align: right; word-break: break-all; }
+  button { width: 100%; padding: 14px; font-size: 15px; font-weight: 550;
+           border-radius: 12px; border: 1px solid var(--line);
+           background: var(--card2); color: var(--fg); margin-bottom: 9px;
+           font-family: inherit; }
+  button:active { opacity: .65; }
+  button.primary { background: var(--accent); border-color: var(--accent);
+                   color: #04101f; }
+  button[disabled] { opacity: .4; }
+  .log { background: var(--card); border: 1px solid var(--line);
+         border-radius: 12px; padding: 12px; overflow-x: auto;
+         font: 11.5px/1.55 ui-monospace, "Roboto Mono", monospace;
+         color: var(--dim); white-space: pre; margin-bottom: 12px; }
+  .log .crit { color: var(--poor); font-weight: 600; }
+  .log .high { color: var(--fair); }
+  .log .info { opacity: .75; }
+  .log .head { color: var(--accent); font-weight: 600; }
+  .note { color: var(--dim); font-size: 12px; text-align: center; margin-top: 4px; }
+  .foot { color: var(--dim); font-size: 11.5px; text-align: center;
+          margin-top: 10px; font-family: ui-monospace, monospace; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>Overlay Auditor</h1>
+  <span class="sub" id="kern"></span>
+</div>
+
+<div class="card" id="verdictcard">
+  <p class="verdict good" id="verdict">reading&hellip;</p>
+  <div class="sub2" id="verdictsub">asking the device</div>
+  <div class="stats">
+    <div class="stat"><div class="k">owned</div>
+      <div class="v good" id="s-owned">&ndash;</div></div>
+    <div class="stat"><div class="k">orphan</div>
+      <div class="v" id="s-orphan">&ndash;</div></div>
+    <div class="stat"><div class="k">stale</div>
+      <div class="v" id="s-stale">&ndash;</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="kv"><span class="k">overlay</span><span class="v" id="r-overlay">&ndash;</span></div>
+  <div class="kv"><span class="k">mountify</span><span class="v" id="r-mount">&ndash;</span></div>
+  <div class="kv"><span class="k">mounted ids</span><span class="v" id="r-ids">&ndash;</span></div>
+</div>
+
+<button class="primary" id="refresh">Re-scan</button>
+
+<div class="log" id="log">scanning&hellip;</div>
+
+<div class="note">
+  Read-only. Nothing on this page moves, renames or deletes anything.<br>
+  Removing files is terminal-only:
+  <span style="font-family:ui-monospace,monospace">sh audit.sh remove &lt;id&gt;</span>
+</div>
+<div class="foot" id="bridge">bridge: not probed</div>
+
+<script>
+'use strict';
+
+var RUN = '/data/adb/star2lte-audit/audit.sh';
+var ALT = '/data/adb/modules/star2lte_audit/audit.sh';
+var CMD = 'S=' + RUN + '; [ -f "$S" ] || S=' + ALT + '; sh "$S" report';
+var BRIDGE = 'not probed';
+var busy = false;
+
+// ksu.exec's contract differs between KernelSU builds: some return a JSON
+// envelope {errno, stdout, stderr}, some the command's raw output, some only
+// the callback form. Accept all of them and record what we saw.
+function sh(cmd) {
+  if (typeof ksu === 'undefined' || !ksu || typeof ksu.exec !== 'function') {
+    BRIDGE = 'ksu.exec missing';
+    return { errno: -1, stdout: '', stderr: 'not running inside the KernelSU WebUI' };
+  }
+  var raw;
+  try { raw = ksu.exec(cmd); }
+  catch (e) { BRIDGE = 'exec threw'; return { errno: -1, stdout: '', stderr: String(e) }; }
+
+  if (raw === undefined || raw === null) {
+    BRIDGE = 'exec returned ' + raw;
+    return { errno: -1, stdout: '', stderr: 'ksu.exec returned nothing' };
+  }
+  if (typeof raw === 'object') {
+    if (typeof raw.then === 'function') {
+      BRIDGE = 'promise';
+      return { errno: -1, stdout: '', stderr: 'async bridge not supported here' };
+    }
+    BRIDGE = 'object';
+    return { errno: raw.errno | 0, stdout: String(raw.stdout || ''),
+             stderr: String(raw.stderr || '') };
+  }
+
+  var s = String(raw);
+  BRIDGE = 'string(' + s.length + ')';
+
+  if (s.charAt(0) === '{') {
+    try {
+      var o = JSON.parse(s);
+      if (o && typeof o === 'object') {
+        var out = null;
+        var keys = ['stdout', 'out', 'output', 'stdOut', 'data', 'result', 'msg', 'message'];
+        for (var i = 0; i < keys.length && out === null; i++)
+          if (typeof o[keys[i]] === 'string') out = o[keys[i]];
+        if (out === null)
+          for (var k in o)
+            if (typeof o[k] === 'string' && o[k].length) { out = o[k]; break; }
+        if (out !== null) {
+          BRIDGE += ' -> envelope';
+          return { errno: o.errno | o.code | o.status | 0, stdout: out,
+                   stderr: String(o.stderr || o.err || '') };
+        }
+      }
+    } catch (e) { /* not JSON; fall through */ }
+  }
+  BRIDGE += ' -> raw';
+  return { errno: 0, stdout: s, stderr: '' };
+}
+
+function esc(t) {
+  return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function set(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; }
+
+function classify(line) {
+  if (/\[CRITICAL\]/.test(line)) return 'crit';
+  if (/\[HIGH\]/.test(line)) return 'high';
+  if (/\[info\]/.test(line)) return 'info';
+  if (/^---/.test(line) || /^===/.test(line)) return 'head';
+  return '';
+}
+
+function render(lines) {
+  var out = [], i;
+  for (i = 0; i < lines.length; i++) {
+    var c = classify(lines[i]);
+    out.push(c ? '<span class="' + c + '">' + esc(lines[i]) + '</span>' : esc(lines[i]));
+  }
+  document.getElementById('log').innerHTML = out.join('\n');
+
+  var text = lines.join('\n');
+  var m;
+
+  m = text.match(/kernel: (.+)/);
+  if (m) set('kern', m[1]);
+
+  m = text.match(/file\(s\): (\d+) from a module, (\d+) orphan\/differing, (\d+) stale/);
+  if (m) {
+    set('s-owned', m[1]); set('s-orphan', m[2]); set('s-stale', m[3]);
+    document.getElementById('s-orphan').className = 'v' + (m[2] === '0' ? ' good' : ' poor');
+    document.getElementById('s-stale').className  = 'v' + (m[3] === '0' ? ' good' : ' poor');
+  }
+
+  m = text.match(/(\d+) CRITICAL, (\d+) to review/);
+  var crit = m ? parseInt(m[1], 10) : 0;
+  var v = document.getElementById('verdict');
+  if (m) {
+    v.textContent = crit + (crit === 1 ? ' critical conflict' : ' critical conflicts');
+    v.className = 'verdict poor';
+    set('verdictsub', m[2] + ' other item(s) to review');
+  } else if (/no critical conflicts/.test(text)) {
+    m = text.match(/no critical conflicts; (\d+) item/);
+    var n = m ? parseInt(m[1], 10) : 0;
+    v.textContent = n ? 'Clean, ' + n + ' to review' : 'Clean';
+    v.className = 'verdict good';
+    set('verdictsub', n ? 'nothing boot-critical, nothing orphaned'
+                        : 'every overlay file is owned by a module');
+  } else {
+    v.textContent = 'Could not read the report';
+    v.className = 'verdict fair';
+    set('verdictsub', 'see the log below');
+  }
+
+  m = text.match(/(\/\S+)\s+upper=(\S+)/);
+  set('r-overlay', m ? m[1] + ' <- ' + m[2] : 'no hand-built overlay found');
+  m = text.match(/mode: (\w+)/);
+  set('r-mount', m ? m[1] : '?');
+  m = text.match(/modules\.txt: (.*)/);
+  set('r-ids', m && m[1].trim() ? m[1].trim() : '(none)');
+}
+
+var callbackFired = false;
+
+function onAuditDone(errno, stdout, stderr) {
+  callbackFired = true;
+  renderResult((stdout || '') + (stdout || stderr ? '' : ''), stderr || '',
+               (stdout || '').split('\n'));
+}
+
+function renderResult(txt, errOut, lines) {
+  var kept = [], i;
+  for (i = 0; i < lines.length; i++) {
+    var L = lines[i].replace(/\s+$/, '');
+    if (L.length) kept.push(L);
+  }
+  if (!kept.length) {
+    document.getElementById('log').textContent =
+      'No output from the auditor.\n\n' + (errOut || '(no stderr)') +
+      '\n\nbridge: ' + BRIDGE;
+    document.getElementById('verdict').textContent = 'No output';
+    document.getElementById('verdict').className = 'verdict fair';
+    set('verdictsub', 'the auditor did not run');
+  } else {
+    render(kept);
+  }
+  set('bridge', 'bridge: ' + BRIDGE);
+  busy = false;
+  document.getElementById('refresh').disabled = false;
+}
+
+function scan() {
+  if (busy) return;
+  busy = true;
+  callbackFired = false;
+  document.getElementById('refresh').disabled = true;
+  document.getElementById('log').textContent = 'scanning\u2026';
+
+  if (typeof ksu === 'undefined' || !ksu || typeof ksu.exec !== 'function') {
+    BRIDGE = 'ksu.exec missing';
+    renderResult('', 'not running inside the KernelSU WebUI', []);
+    return;
+  }
+
+  try {
+    // 3-arg form: manager runs the command and calls onAuditDone(errno,
+    // stdout, stderr) - stdout is the FULL multi-line output, not just the
+    // last line like the 1-arg sync form.
+    ksu.exec(CMD, '{}', 'onAuditDone');
+    BRIDGE = 'callback form';
+  } catch (e) {
+    BRIDGE = 'callback threw (' + e + ')';
+  }
+
+  // Fallback: some bridges ignore the 3-arg form. If nothing came back in
+  // 5s, use the sync 1-arg form (returns the LAST line only, so re-run in
+  // the ;;-joined webui mode for it).
+  setTimeout(function () {
+    if (callbackFired || !busy) return;
+    BRIDGE = 'sync fallback';
+    var SYNC = 'S=' + RUN + '; [ -f "$S" ] || S=' + ALT + '; sh "$S" webui';
+    var raw = null;
+    try { raw = ksu.exec(SYNC); } catch (e) { raw = null; }
+    var lines = (typeof raw === 'string' && raw.length)
+      ? String(raw).split(';;') : [];
+    renderResult(String(raw || ''), '', lines);
+  }, 5000);
+}
+
+document.getElementById('refresh').addEventListener('click', scan);
+scan();
+</script>
+</body>
+</html>

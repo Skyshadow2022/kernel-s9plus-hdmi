@@ -1,0 +1,6 @@
+id=star2lte_audiofix
+name=star2lte Audio Repair
+version=v1.0
+versionCode=1
+author=mehran
+description=Diagnoses and repairs the /vendor overlay that breaks the audio HAL on this device. Tap ACTION to back up and clear the overlay upper dir, then reboot. Nothing is deleted - the old upper is moved aside.

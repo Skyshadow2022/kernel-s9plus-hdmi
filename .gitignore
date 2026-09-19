@@ -59,3 +59,5 @@ Module.symvers
 # /reference/**/.git/
 **/.git.bak-nested/
 **/.git.bak-upstream/
+tune-2026-09-12.bundle
+__pycache__/

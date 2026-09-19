@@ -1,6 +1,6 @@
 id=star2lte_tune
 name=star2lte Tune (gaming / net / VM)
-version=v1.1
-versionCode=2
+version=v2.1-gaming
+versionCode=21
 author=mehran
 description=Exynos 9810 tuning for PE13: gaming profile (big unlock 2.3GHz, Mali floor, schedutil ramp), BBR/fq net, ION/zram fixes, fingerprint sync, APN prefer. See docs/TUNE_HANDOFF_2026-09-13.md

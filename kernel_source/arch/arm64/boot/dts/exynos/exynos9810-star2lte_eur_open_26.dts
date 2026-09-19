@@ -10346,8 +10346,8 @@
 		skip_lit_enabled = <0x0>;
 		cl_busy_ratio = <0x41>;
 		dual_freq = <0x234f10>;
-		triple_freq = <0x1b5fd0>;
-		quad_freq = <0x1b5fd0>;
+		triple_freq = <0x234f10>;
+		quad_freq = <0x234f10>;
 		cal-id = <0xb040003>;
 	};
 
@@ -10437,8 +10437,8 @@
 			cal-id = <0xb040003>;
 			dm-type = <0x1>;
 			min-freq = <0x9eb10>;
-			max-freq = <0x1b5fd0>;
-			policy-max = <0x1b5fd0>;
+			max-freq = <0x234f10>;
+			policy-max = <0x234f10>;
 			pm_qos-min-class = <0x5>;
 			pm_qos-max-class = <0x6>;
 			pm_qos-booting = <0x1b5fd0>;

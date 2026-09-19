@@ -1,0 +1,19 @@
+=== /proc/modules ===
+=== touch driver builtin? ===
+0
+config.gz n/a
+
+=== ak3-helper ko vs live ko ===
+6ed68bd335c2f75590165628c8958316e1a2b5c9b5433efeedbc83ffad42d30d  /system/lib/modules/sec_ts_drv.ko
+a4f1cbc68a5f71ba26a4d26b02219eef17e6fdf0862271c3ed76198691a69811  /data/adb/modules/ak3-helper/system/lib/modules/sec_ts_drv.ko
+
+=== upper subdirs empty? ===
+  lib : 0 file(s)
+  lib64 : 0 file(s)
+  etc : 0 file(s)
+  lib/soundfx : 0 file(s)
+  lib64/soundfx : 0 file(s)
+
+=== full fw hashes ===
+7690b6d7893b801ed92bd8a2eaa55ab6338fcccae32662949bc1229760566597  /cache/overlay/vendor/upper/firmware/tsp_sec/y761_star1.fw
+ab465e34283f0162ca52217f1a11667eb1e4b0eaa2ab6d0fbd1b2170c789a12d  /cache/overlay/vendor/upper/firmware/tsp_sec/y761_star2.fw
