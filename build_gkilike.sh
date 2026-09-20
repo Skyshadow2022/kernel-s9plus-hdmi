@@ -111,7 +111,7 @@ verify_fragments() {
   local frag line key bad=0
   declare -A want
 
-  for frag in "$FRAGMENT" "$KSU_FRAGMENT" "$PERF_FRAGMENT" "$PERF_BATT_FRAGMENT" "$PERF_GAMING_FRAGMENT" "$MEM_FRAGMENT" "$VINTF_FRAGMENT" "$FORENSICS_FRAGMENT"; do
+  for frag in "$FRAGMENT" "$KSU_FRAGMENT" "$SUSFS_FRAGMENT" "$DEBUG_TRACE_FRAGMENT" "$PERF_FRAGMENT" "$PERF_BATT_FRAGMENT" "$PERF_GAMING_FRAGMENT" "$MEM_FRAGMENT" "$VINTF_FRAGMENT" "$FORENSICS_FRAGMENT"; do
     [[ -f "$frag" ]] || continue
     while IFS= read -r line || [ -n "$line" ]; do
       case "$line" in
