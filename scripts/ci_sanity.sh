@@ -14,9 +14,7 @@ echo "== kernel-s9plus-hdmi sanity =="
 # Required project files
 for f in \
   build_gkilike.sh \
-  HDMI_READY.md \
   docs/DEX_PATTERN.md \
-  configs/displayport.fragment \
   configs/gkilike_touch.fragment \
   kernel_source/Makefile \
   kernel_source/drivers/video/fbdev/exynos/dpu_9810/displayport_drv.c \
@@ -43,28 +41,8 @@ while IFS= read -r -d '' frag; do
   fi
 done < <(find configs -type f -name '*.fragment' -print0)
 
-# HWC host markers must remain in tree
-if grep -q 'displayport_hwc_takeover' \
-    kernel_source/drivers/video/fbdev/exynos/dpu_9810/displayport_drv.c \
-    kernel_source/drivers/video/fbdev/exynos/dpu_9810/decon_core.c; then
-  ok "HWC takeover hook present"
-else
-  bad "HWC takeover hook missing"
-fi
-
-if grep -q 'default_idma = <0x3>' \
-    kernel_source/arch/arm64/boot/dts/exynos/exynos9810-star2lte_eur_open_26.dts; then
-  ok "star2lte DP default_idma=VG1"
-else
-  bad "star2lte DP default_idma not VG1"
-fi
-
-# Reference trees for Phase A
-if [[ -f reference/android_hardware_samsung_slsi-linaro_graphics/base/libhwc2.1/platform/exynos9810/ExynosHWCModule.h ]]; then
-  ok "HWC exynos9810 reference present"
-else
-  bad "HWC reference missing"
-fi
+# HDMI/DP workstream abandoned (2026-09-20): the HWC takeover / default_idma /
+# reference-tree checks were removed with configs/displayport.fragment.
 
 if [[ "$fail" -ne 0 ]]; then
   echo "sanity FAILED"
