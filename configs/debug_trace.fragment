@@ -1,0 +1,11 @@
+# Temporary audio-race forensics fragment - REMOVE once root-caused.
+# DYNAMIC_DEBUG + FTRACE are independent of KernelSU manual hooks.
+# NOTE: do NOT enable CONFIG_KPROBES here - KSU_KPROBES_HOOK would auto-enable
+# and break the manual-hook setup.
+CONFIG_DYNAMIC_DEBUG=y
+CONFIG_FTRACE=y
+CONFIG_FUNCTION_TRACER=y
+CONFIG_DYNAMIC_FTRACE=y
+CONFIG_FUNCTION_GRAPH_TRACER=y
+CONFIG_STACK_TRACER=y
+# CONFIG_KPROBES is not set
