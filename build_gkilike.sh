@@ -9,12 +9,12 @@ STAGING="$ROOT/out_gkilike"
 AK="$ROOT/AnyKernel3"
 FRAGMENT="$ROOT/configs/gkilike_touch.fragment"
 KSU_FRAGMENT="$ROOT/configs/kernelsu.fragment"
-DP_FRAGMENT="$ROOT/configs/displayport.fragment"
 PERF_FRAGMENT="$ROOT/configs/perf_net.fragment"
 PERF_BATT_FRAGMENT="$ROOT/configs/perf_batt.fragment"
 PERF_GAMING_FRAGMENT="$ROOT/configs/perf_gaming.fragment"
 MEM_FRAGMENT="$ROOT/configs/mem_ion.fragment"
 VINTF_FRAGMENT="$ROOT/configs/vintf_aosp.fragment"
+FORENSICS_FRAGMENT="$ROOT/configs/forensics.fragment"
 # Opt-in: ENABLE_WIFI_MODULE=1 ./build_gkilike.sh
 WIFI_FRAGMENT="$ROOT/configs/gkilike_wifi.fragment"
 JOBS="${JOBS:-$(nproc)}"
@@ -80,12 +80,12 @@ apply_one_fragment() {
 apply_fragment() {
   apply_one_fragment "$FRAGMENT"
   apply_one_fragment "$KSU_FRAGMENT"
-  apply_one_fragment "$DP_FRAGMENT"
   apply_one_fragment "$PERF_FRAGMENT"
   apply_one_fragment "$PERF_BATT_FRAGMENT"
   apply_one_fragment "$PERF_GAMING_FRAGMENT"
   apply_one_fragment "$MEM_FRAGMENT"
   apply_one_fragment "$VINTF_FRAGMENT"
+  apply_one_fragment "$FORENSICS_FRAGMENT"
   if [[ "${ENABLE_WIFI_MODULE:-0}" == "1" ]]; then
     log "ENABLE_WIFI_MODULE=1 → applying Wi-Fi modular pilot"
     apply_one_fragment "$WIFI_FRAGMENT"
@@ -107,7 +107,7 @@ verify_fragments() {
   local frag line key bad=0
   declare -A want
 
-  for frag in "$FRAGMENT" "$KSU_FRAGMENT" "$DP_FRAGMENT" "$PERF_FRAGMENT"               "$PERF_BATT_FRAGMENT" "$PERF_GAMING_FRAGMENT" "$MEM_FRAGMENT" "$VINTF_FRAGMENT"; do
+  for frag in "$FRAGMENT" "$KSU_FRAGMENT" "$PERF_FRAGMENT" "$PERF_BATT_FRAGMENT" "$PERF_GAMING_FRAGMENT" "$MEM_FRAGMENT" "$VINTF_FRAGMENT" "$FORENSICS_FRAGMENT"; do
     [[ -f "$frag" ]] || continue
     while IFS= read -r line || [ -n "$line" ]; do
       case "$line" in

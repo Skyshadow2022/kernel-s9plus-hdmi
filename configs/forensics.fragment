@@ -1,0 +1,10 @@
+# Forensics aid — bigger printk ring + console ramoops
+# The default ~256KB ring rotates through the early-boot audio-probe window
+# (t<12s) before adb can capture it; a losing boot therefore shows zero
+# [audio-dbg] lines even when the probes printed. 2MB holds the whole boot.
+CONFIG_LOG_BUF_SHIFT=21
+# pmsg-ramoops-0 already works on this DT; console-ramoops needs this on so
+# the FULL kernel log of the previous boot survives a reboot in
+# /sys/fs/pstore/console-ramoops-0 — the reliable way to read early-boot
+# probe chains of winning AND losing boots.
+CONFIG_PSTORE_CONSOLE=y
