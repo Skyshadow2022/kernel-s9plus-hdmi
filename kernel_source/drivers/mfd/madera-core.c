@@ -707,6 +707,11 @@ int madera_dev_init(struct madera *madera)
 		     hwid == CS47L90_SILICON_ID || hwid == CS47L92_SILICON_ID))
 			break;
 
+		pr_info("[audio-dbg] madera_dev_init: recycling (dcvdd is_enabled=%d lvl=%d)\n",
+			regulator_is_enabled(madera->dcvdd),
+			madera->reset_gpio ?
+				gpiod_get_value_cansleep(madera->reset_gpio) : -1);
+
 		if (madera->reset_gpio)
 			gpiod_set_value_cansleep(madera->reset_gpio, 1);
 		regulator_bulk_disable(madera->num_core_supplies,
@@ -724,6 +729,23 @@ int madera_dev_init(struct madera *madera)
 			goto err_enable;
 		msleep(10);
 		if (madera->reset_gpio) {
+			/* cover both polarities: the DT marks the line
+			 * ACTIVE_HIGH; if the board is actually /RESET
+			 * (active-low) the first read must happen with the
+			 * line HIGH and the second with it LOW */
+			gpiod_set_value_cansleep(madera->reset_gpio, 1);
+			msleep(30);
+			ret = regmap_read(madera->regmap,
+					  MADERA_SOFTWARE_RESET, &hwid);
+			pr_info("[audio-dbg] madera_dev_init: hwid=0x%x try=%d line=HIGH ret=%d\n",
+				hwid, i, ret);
+			if (ret == 0 &&
+			    (hwid == CS47L35_SILICON_ID ||
+			     hwid == CS47L85_SILICON_ID ||
+			     hwid == CS47L90_SILICON_ID ||
+			     hwid == CS47L92_SILICON_ID))
+				break;
+
 			gpiod_set_value_cansleep(madera->reset_gpio, 0);
 			msleep(30);
 		}
