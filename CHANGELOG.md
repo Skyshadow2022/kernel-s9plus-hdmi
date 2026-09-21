@@ -7,7 +7,33 @@ Legend: ✅ verified on device · ⚠️ flashed, problem found · ❌ never fla
 
 ---
 
-## [20260919-2314] — 2026-09-19 — GOLDEN BUILD ✅ CURRENT ON DEVICE
+## [20260921-1200] — 2026-09-21 — AUDIO BOOT-RACE FIXED ✅ CURRENT ON DEVICE
+
+`Kernel-star2lte-gkilike-20260921-1200.zip` (CI run 35596618387, commit
+`shotgun recovery in madera_dev_init`) · flashed 2026-09-21, verified
+2026-09-21/22.
+
+- **Root cause caught by the instrumented builds**: on losing boots
+  `madera_dev_init`'s first ID read returns `hwid=0xffff` (chip unresponsive)
+  → `probe of spi2.0 failed with error -22` → no Star-Madera card for the
+  whole boot. PMIC/DCVDD was NEVER the problem (readback proved
+  `is_enabled=1`); the reset line state was.
+- **Fix**: on an unresponsive chip, the driver now recycles supplies+reset,
+  probes the chip with the reset line HIGH (the DT's ACTIVE_HIGH flag vs the
+  board's real /RESET polarity disagree) and keeps whatever state makes the
+  chip answer. Evidence: three boots in the verification hunt engaged the
+  recovery (`hwid=0xffff try=0` → `hwid=0x6371 line=HIGH` → `boot wait
+  ret=0`) and came up WITH sound — those boots were losers before.
+- **Verification: 12/12 consecutive winning boots** (CI runs 35519276485 →
+  35596618387 lineage, hunt v5+v6). Historical loser rate was ~50%.
+- Also shipped in this line: 2MB printk ring (`LOG_BUF_SHIFT=21`) so early
+  boot `[audio-dbg]` chains survive to adb capture; forensics.fragment.
+- Note: userspace SPI rebind (`audio-rescue.sh`) is impossible —
+  `s3c64xx-spi` ships with `suppress_bind_attrs` (no bind/unbind in sysfs).
+
+---
+
+## [20260919-2314] — 2026-09-19 — GOLDEN BUILD ✅ (superseded on device by 20260921-1200)
 
 `Kernel-star2lte-gkilike-20260919-2314-SUSFS-golden.zip` · sha256 `3973a663…` ·
 artifact branch `releases/sound-verified/`.
