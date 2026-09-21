@@ -692,14 +692,47 @@ int madera_dev_init(struct madera *madera)
 	/*
 	 * Verify that this is a chip we know about before we
 	 * starting doing any writes to its registers
+	 *
+	 * star2lte (Exynos 9810): the codec occasionally misses its power-up
+	 * window during boot - supplies and /RESET are applied but the first
+	 * SPI read returns 0xffff and the whole sound card is lost for that
+	 * boot. Recycle reset + supplies and retry before giving up.
 	 */
-	ret = regmap_read(madera->regmap, MADERA_SOFTWARE_RESET, &hwid);
+	for (i = 0; i < 4; i++) {
+		ret = regmap_read(madera->regmap, MADERA_SOFTWARE_RESET, &hwid);
+		pr_info("[audio-dbg] madera_dev_init: hwid=0x%x try=%d ret=%d\n",
+			hwid, i, ret);
+		if (ret == 0 &&
+		    (hwid == CS47L35_SILICON_ID || hwid == CS47L85_SILICON_ID ||
+		     hwid == CS47L90_SILICON_ID || hwid == CS47L92_SILICON_ID))
+			break;
+
+		if (madera->reset_gpio)
+			gpiod_set_value_cansleep(madera->reset_gpio, 1);
+		regulator_bulk_disable(madera->num_core_supplies,
+				       madera->core_supplies);
+		regulator_disable(madera->dcvdd);
+		msleep(60);
+
+		ret = regulator_bulk_enable(madera->num_core_supplies,
+					    madera->core_supplies);
+		pr_info("[audio-dbg] madera_dev_init: supplies ret=%d\n", ret);
+		if (ret)
+			goto err_notifier;
+		ret = regulator_enable(madera->dcvdd);
+		if (ret)
+			goto err_enable;
+		msleep(10);
+		if (madera->reset_gpio) {
+			gpiod_set_value_cansleep(madera->reset_gpio, 0);
+			msleep(30);
+		}
+	}
+
 	if (ret) {
-		pr_info("[audio-dbg] madera_dev_init: ID read ret=%d\n", ret);
 		dev_err(dev, "Failed to read ID register: %d\n", ret);
 		goto err_reset;
 	}
-	pr_info("[audio-dbg] madera_dev_init: hwid=0x%x\n", hwid);
 
 	switch (hwid) {
 	case CS47L35_SILICON_ID:
