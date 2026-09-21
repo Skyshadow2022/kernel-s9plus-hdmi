@@ -601,8 +601,10 @@ int madera_dev_init(struct madera *madera)
 	}
 
 	ret = madera_get_reset_gpio(madera);
-	if (ret)
+	if (ret) {
+		pr_info("[audio-dbg] madera_dev_init: get_reset_gpio ret=%d\n", ret);
 		return ret;
+	}
 
 	madera_prop_get_micbias(madera);
 
@@ -693,9 +695,11 @@ int madera_dev_init(struct madera *madera)
 	 */
 	ret = regmap_read(madera->regmap, MADERA_SOFTWARE_RESET, &hwid);
 	if (ret) {
+		pr_info("[audio-dbg] madera_dev_init: ID read ret=%d\n", ret);
 		dev_err(dev, "Failed to read ID register: %d\n", ret);
 		goto err_reset;
 	}
+	pr_info("[audio-dbg] madera_dev_init: hwid=0x%x\n", hwid);
 
 	switch (hwid) {
 	case CS47L35_SILICON_ID:
@@ -712,8 +716,10 @@ int madera_dev_init(struct madera *madera)
 	/* If we don't have a reset GPIO use a soft reset */
 	if (!madera->reset_gpio) {
 		ret = madera_soft_reset(madera);
-		if (ret)
+		if (ret) {
+			pr_info("[audio-dbg] madera_dev_init: soft_reset ret=%d\n", ret);
 			goto err_reset;
+		}
 	}
 
 	ret = madera_wait_for_boot(madera);
