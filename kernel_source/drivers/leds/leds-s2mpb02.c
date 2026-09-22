@@ -1004,6 +1004,16 @@ static int s2mpb02_led_probe(struct platform_device *pdev)
 
 		memcpy(data, &(pdata->leds[i]), sizeof(struct s2mpb02_led));
 
+		/* recovery-DT (the SBL applies the recovery DTBO overlay) can
+		 * lack the LED label — led_classdev_register strlcpy's the
+		 * name and a NULL name NULL-derefs strlen (recovery bootloop
+		 * crash #2, from /proc/last_kmsg). */
+		if (data->name == NULL) {
+			pr_err("[LED] led%d has no name in DT — skipping\n", i);
+			kfree(data);
+			continue;
+		}
+
 		led_data = kzalloc(sizeof(struct s2mpb02_led_data),
 				   GFP_KERNEL);
 
