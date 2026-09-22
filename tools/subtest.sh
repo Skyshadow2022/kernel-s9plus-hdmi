@@ -54,7 +54,7 @@ t=$(cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -3); echo "INFO
 u=$(getprop sys.usb.state); echo "INFO usb: $u"
 
 # ---- camera presence (HAL side) ----
-p=$(ps -A | grep -c "camera.provider\|cameraserver"); [ "$p" -gt 1 ] && P "camera: provider+server running" || F "camera: provider missing"
+p=$(ps -A | grep -cE "camera.provider|cameraserver"); [ "$p" -gt 1 ] && P "camera: provider+server running" || F "camera: provider missing"
 
 echo "==================================="
 [ "$fail" = "0" ] && echo "SUBTEST: PASS" || echo "SUBTEST: $fail FAILURES"
