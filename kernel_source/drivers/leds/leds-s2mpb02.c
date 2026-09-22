@@ -893,13 +893,29 @@ static int of_s2mpb02_torch_dt(struct s2mpb02_dev *iodev,
 		ret = of_property_read_u32(c_np, "id", &temp);
 		if (ret) {
 			pr_info("%s failed to get a id\n", __func__);
+			/* recovery-DT (SBL minimal profile) has no LED children
+			 * with properties — bail the whole LED probe cleanly
+			 * instead of indexing with an uninitialized id */
+			kfree(pdata);
+			return -ENODEV;
 		}
 		index = temp;
+		if (index < 0 || index >= S2MPB02_LED_MAX) {
+			pr_err("%s: led id %d out of range\n", __func__, index);
+			kfree(pdata);
+			return -ENODEV;
+		}
 		pdata->leds[index].id = temp;
 
 		ret = of_property_read_string(c_np, "ledname", &temp_str);
 		if (ret) {
 			pr_info("%s failed to get a ledname\n", __func__);
+			/* uninitialized temp_str = garbage pointer — strlcpy in
+			 * led_classdev_register panics on it (recovery bootloop
+			 * crash #2). The torch LED is cosmetic in recovery:
+			 * bail the probe cleanly. */
+			kfree(pdata);
+			return -ENODEV;
 		}
 		pdata->leds[index].name = temp_str;
 		ret = of_property_read_u32(c_np, "brightness", &temp);
