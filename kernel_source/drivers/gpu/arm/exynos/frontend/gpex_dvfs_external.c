@@ -29,6 +29,8 @@ static struct dvfs_info *dvfs;
 
 int gpu_dvfs_get_clock(int level)
 {
+	if (!dvfs)
+		return -1;
 	if ((level < 0) || (level >= dvfs->table_size))
 		return -1;
 
@@ -44,6 +46,12 @@ EXPORT_SYMBOL_GPL(gpu_dvfs_get_voltage);
 
 int gpu_dvfs_get_step(void)
 {
+	/* star2lte recovery boot: the bootloader strips the GPU node from the
+	 * DT, the Mali driver never probes and dvfs stays NULL — the thermal
+	 * cooling initcall must get a graceful 0 instead of a NULL deref
+	 * panic (this reboot-looped every recovery boot). */
+	if (!dvfs)
+		return 0;
 	return dvfs->table_size;
 }
 EXPORT_SYMBOL_GPL(gpu_dvfs_get_step);
