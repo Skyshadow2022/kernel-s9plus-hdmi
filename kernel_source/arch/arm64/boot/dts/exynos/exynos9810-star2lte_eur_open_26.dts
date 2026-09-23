@@ -12873,8 +12873,12 @@
 
 	chosen {
 		bootargs = "console=ram root=/dev/ram0 clk_ignore_unused bcm_setup=0xffffff80f8e00000 androidboot.hardware=samsungexynos9810 androidboot.selinux=permissive androidboot.debug_level=0x4948 ecd_setup=disable pmic_info=0x3 ccic_info=0x1 firmware_class.path=/vendor/firmware reserve-fimc=0xffffff80fa000000";
-		linux,initrd-start = <0x82000000>;
-		linux,initrd-end = <0x821fffff>;
+		/* TRIMMED 2026-09-23: the hardcoded 2MB linux,initrd-start/end stub
+		 * overrides the SBL's real ATAG_INITRD2 in RECOVERY boots (the DT
+		 * /chosen beats ATAGs on arm32 DT boot) -> the kernel's initrd window
+		 * pointed at the wrong address -> 'junk in compressed archive' ->
+		 * VFS panic. The SBL packs the true initrd ATAGs; do not re-add. */
+
 	};
 
 	fixed-rate-clocks {
